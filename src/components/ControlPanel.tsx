@@ -29,10 +29,10 @@ export default function ControlPanel({
       : 'Agora marque o ponto correspondente na Imagem Padrão (B).'
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-200 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-200 md:flex-row md:items-center md:justify-between dark:bg-gray-800 dark:ring-gray-700">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-gray-800">{feedback}</span>
-        <span className="text-xs text-gray-400">
+        <span className="text-sm font-medium text-gray-800 dark:text-gray-100">{feedback}</span>
+        <span className="text-xs text-gray-400 dark:text-gray-500">
           Pontos confrontados: {completedPairs} · arraste um ponto já marcado para ajustar a posição
         </span>
       </div>
@@ -41,7 +41,7 @@ export default function ControlPanel({
         <button
           onClick={onUndo}
           disabled={!canUndo}
-          className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
         >
           <Undo2 size={16} />
           Desfazer último ponto
