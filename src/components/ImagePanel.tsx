@@ -33,6 +33,7 @@ interface ImagePanelProps {
   title: string
   image: string | null
   minutiae: Minutia[]
+  markerSize: number
   transform: ImageTransform
   onTransformChange: Dispatch<SetStateAction<ImageTransform>>
   otherImage: string | null
@@ -61,6 +62,7 @@ export default function ImagePanel({
   title,
   image,
   minutiae,
+  markerSize,
   transform,
   onTransformChange: setTransform,
   otherImage,
@@ -290,8 +292,8 @@ export default function ImagePanel({
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-1">
-        <h2 className="font-semibold text-gray-700">
-          {title} <span className="text-xs font-normal text-gray-400">(Imagem {slot})</span>
+        <h2 className="font-semibold text-gray-700 dark:text-gray-200">
+          {title} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Imagem {slot})</span>
         </h2>
         <div className="flex items-center gap-1">
           {image && (
@@ -300,7 +302,7 @@ export default function ImagePanel({
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
                 adjustMode
                   ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50'
+                  : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
               }`}
             >
               {adjustMode ? <Check size={14} /> : <Move size={14} />}
@@ -309,7 +311,7 @@ export default function ImagePanel({
           )}
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            className="flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
           >
             <Upload size={14} />
             {image ? 'Trocar imagem' : 'Carregar imagem'}
@@ -325,19 +327,19 @@ export default function ImagePanel({
       </div>
 
       {adjustMode && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200">
+        <div className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700">
           <div className="flex items-center gap-1">
             <button
               onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom / 1.2, MIN_ZOOM, MAX_ZOOM) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100"
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
               title="Diminuir zoom"
             >
               <ZoomOut size={14} />
             </button>
-            <span className="w-10 text-center text-gray-500">{Math.round(transform.zoom * 100)}%</span>
+            <span className="w-10 text-center text-gray-500 dark:text-gray-400">{Math.round(transform.zoom * 100)}%</span>
             <button
               onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom * 1.2, MIN_ZOOM, MAX_ZOOM) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100"
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
               title="Aumentar zoom"
             >
               <ZoomIn size={14} />
@@ -347,7 +349,7 @@ export default function ImagePanel({
           <div className="flex items-center gap-1">
             <button
               onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation - 90) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100"
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
               title="Girar 90° à esquerda"
             >
               <RotateCcw size={14} />
@@ -364,12 +366,12 @@ export default function ImagePanel({
             />
             <button
               onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation + 90) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100"
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
               title="Girar 90° à direita"
             >
               <RotateCw size={14} />
             </button>
-            <span className="w-9 text-center text-gray-500">{Math.round(transform.rotation)}°</span>
+            <span className="w-9 text-center text-gray-500 dark:text-gray-400">{Math.round(transform.rotation)}°</span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -378,7 +380,7 @@ export default function ImagePanel({
               className={`rounded p-1 shadow-sm ring-1 ${
                 transform.flipped
                   ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100'
+                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
               }`}
               title="Espelhar horizontalmente (frontal/traseira)"
             >
@@ -389,7 +391,7 @@ export default function ImagePanel({
               className={`rounded p-1 shadow-sm ring-1 ${
                 transform.inverted
                   ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100'
+                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
               }`}
               title="Inverter cores (negativo)"
             >
@@ -399,7 +401,7 @@ export default function ImagePanel({
 
           <button
             onClick={() => setTransform(DEFAULT_IMAGE_TRANSFORM)}
-            className="flex items-center gap-1 rounded bg-white px-2 py-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100"
+            className="flex items-center gap-1 rounded bg-white px-2 py-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
             title="Redefinir posição, zoom, rotação, espelhamento e cor"
           >
             <RefreshCw size={12} />
@@ -412,7 +414,7 @@ export default function ImagePanel({
               className={`flex items-center gap-1 rounded px-2 py-1 shadow-sm ring-1 ${
                 showGhost
                   ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100'
+                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
               }`}
               title="Sobrepor a outra imagem como molde para alinhar"
             >
@@ -421,7 +423,7 @@ export default function ImagePanel({
             </button>
           )}
 
-          <span className="text-gray-400">Arraste a imagem para mover</span>
+          <span className="text-gray-400 dark:text-gray-500">Arraste a imagem para mover</span>
         </div>
       )}
 
@@ -432,8 +434,8 @@ export default function ImagePanel({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative aspect-[4/5] w-full overflow-hidden rounded-lg border-2 bg-gray-100 select-none ${
-          allowCreate && image && !adjustMode ? 'border-blue-500' : 'border-gray-300'
+        className={`relative aspect-[4/5] w-full overflow-hidden rounded-lg border-2 bg-gray-100 select-none dark:bg-gray-900/60 ${
+          allowCreate && image && !adjustMode ? 'border-blue-500' : 'border-gray-300 dark:border-gray-700'
         }`}
         style={{ cursor, touchAction: adjustMode ? 'none' : 'auto' }}
       >
@@ -441,10 +443,10 @@ export default function ImagePanel({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-300 hover:text-gray-400"
+            className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-300 hover:text-gray-400 dark:text-gray-700 dark:hover:text-gray-600"
           >
             <Fingerprint size={96} strokeWidth={1} />
-            <span className="text-sm font-medium text-gray-400">Clique para carregar a imagem</span>
+            <span className="text-sm font-medium text-gray-400 dark:text-gray-600">Clique para carregar a imagem</span>
           </button>
         )}
 
@@ -493,8 +495,13 @@ export default function ImagePanel({
                     }}
                   >
                     <div
-                      className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow"
-                      style={{ backgroundColor: m.color }}
+                      className="flex items-center justify-center rounded-full border-2 border-white font-bold text-white shadow"
+                      style={{
+                        width: markerSize,
+                        height: markerSize,
+                        backgroundColor: m.color,
+                        fontSize: Math.max(8, markerSize * 0.42),
+                      }}
                       title={`Ponto ${m.id}`}
                     >
                       {m.id}

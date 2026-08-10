@@ -56,7 +56,7 @@ export default function Magnifier({
         {label}
       </span>
       <div
-        className={`relative overflow-hidden rounded-full border-4 bg-gray-200 shadow-xl ${accent}`}
+        className={`relative overflow-hidden rounded-full border-4 bg-gray-200 shadow-xl dark:bg-gray-700 ${accent}`}
         style={{ width: SIZE, height: SIZE }}
       >
         <div
