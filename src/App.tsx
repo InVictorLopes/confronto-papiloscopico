@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
-import { Fingerprint, Hash, Moon, MoveUpRight, Sun } from 'lucide-react'
+import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, ImageSlot, ImageTransform } from './types'
 import { DEFAULT_IMAGE_TRANSFORM } from './types'
 import ImagePanel from './components/ImagePanel'
@@ -10,6 +10,8 @@ import Magnifier from './components/Magnifier'
 import ExportDialog from './components/ExportDialog'
 import { DEFAULT_MARKER_COLOR } from './colorPalette'
 import { useTheme } from './useTheme'
+
+const MANUAL_URL = 'https://claude.ai/code/artifact/f34adef2-ef2b-45fb-9b80-43e519df7b9c'
 
 const DEFAULT_MARKER_SIZE = 18
 const MIN_MARKER_SIZE = 12
@@ -205,6 +207,16 @@ export default function App() {
             Processamento 100% local — nenhuma imagem é enviada a servidores
           </p>
         </div>
+        <a
+          href={MANUAL_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+          title="Abrir o manual de uso"
+        >
+          <HelpCircle size={18} />
+          Dúvidas
+        </a>
         <button
           onClick={toggleTheme}
           className="rounded-md bg-white p-2 text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
