@@ -38,6 +38,7 @@ interface ImagePanelProps {
   markerSize: number
   showNumbers: boolean
   arrowMode: boolean
+  arrowThickness: number
   transform: ImageTransform
   onTransformChange: Dispatch<SetStateAction<ImageTransform>>
   otherImage: string | null
@@ -53,8 +54,8 @@ interface ImagePanelProps {
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 5
-const MIN_BRIGHTNESS = 40
-const MAX_BRIGHTNESS = 160
+const MIN_CONTRAST = 50
+const MAX_CONTRAST = 250
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -67,7 +68,7 @@ function wrapAngle(deg: number) {
 function buildFilter(t: ImageTransform): string | undefined {
   const parts: string[] = []
   if (t.inverted) parts.push('invert(1)')
-  if (t.brightness !== 100) parts.push(`brightness(${t.brightness}%)`)
+  if (t.contrast !== 100) parts.push(`contrast(${t.contrast}%)`)
   return parts.length ? parts.join(' ') : undefined
 }
 
@@ -79,6 +80,7 @@ export default function ImagePanel({
   markerSize,
   showNumbers,
   arrowMode,
+  arrowThickness,
   transform,
   onTransformChange: setTransform,
   otherImage,
@@ -362,7 +364,20 @@ export default function ImagePanel({
             >
               <ZoomOut size={14} />
             </button>
-            <span className="w-10 text-center text-gray-500 dark:text-gray-400">{Math.round(transform.zoom * 100)}%</span>
+            <div className="flex items-center gap-0.5">
+              <input
+                type="number"
+                value={Math.round(transform.zoom * 100)}
+                onChange={(e) => {
+                  if (e.target.value === '') return
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return
+                  setTransform((t) => ({ ...t, zoom: clamp(v, MIN_ZOOM * 100, MAX_ZOOM * 100) / 100 }))
+                }}
+                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <span className="text-gray-500 dark:text-gray-400">%</span>
+            </div>
             <button
               onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom * 1.2, MIN_ZOOM, MAX_ZOOM) }))}
               className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
@@ -397,7 +412,20 @@ export default function ImagePanel({
             >
               <RotateCw size={14} />
             </button>
-            <span className="w-9 text-center text-gray-500 dark:text-gray-400">{Math.round(transform.rotation)}°</span>
+            <div className="flex items-center gap-0.5">
+              <input
+                type="number"
+                value={Math.round(transform.rotation)}
+                onChange={(e) => {
+                  if (e.target.value === '') return
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return
+                  setTransform((t) => ({ ...t, rotation: clamp(v, -180, 180) }))
+                }}
+                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <span className="text-gray-500 dark:text-gray-400">°</span>
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
@@ -430,41 +458,54 @@ export default function ImagePanel({
               onClick={() =>
                 setTransform((t) => ({
                   ...t,
-                  brightness: clamp(t.brightness - 10, MIN_BRIGHTNESS, MAX_BRIGHTNESS),
+                  contrast: clamp(t.contrast - 10, MIN_CONTRAST, MAX_CONTRAST),
                 }))
               }
               className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Escurecer a digital"
+              title="Diminuir contraste"
             >
               <SunDim size={14} />
             </button>
             <input
               type="range"
-              min={MIN_BRIGHTNESS}
-              max={MAX_BRIGHTNESS}
-              value={transform.brightness}
-              onChange={(e) => setTransform((t) => ({ ...t, brightness: Number(e.target.value) }))}
+              min={MIN_CONTRAST}
+              max={MAX_CONTRAST}
+              value={transform.contrast}
+              onChange={(e) => setTransform((t) => ({ ...t, contrast: Number(e.target.value) }))}
               className="w-20"
             />
             <button
               onClick={() =>
                 setTransform((t) => ({
                   ...t,
-                  brightness: clamp(t.brightness + 10, MIN_BRIGHTNESS, MAX_BRIGHTNESS),
+                  contrast: clamp(t.contrast + 10, MIN_CONTRAST, MAX_CONTRAST),
                 }))
               }
               className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Clarear a digital"
+              title="Aumentar contraste (deixa o preto mais escuro)"
             >
               <Sun size={14} />
             </button>
-            <span className="w-9 text-center text-gray-500 dark:text-gray-400">{transform.brightness}%</span>
+            <div className="flex items-center gap-0.5">
+              <input
+                type="number"
+                value={transform.contrast}
+                onChange={(e) => {
+                  if (e.target.value === '') return
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return
+                  setTransform((t) => ({ ...t, contrast: clamp(v, MIN_CONTRAST, MAX_CONTRAST) }))
+                }}
+                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <span className="text-gray-500 dark:text-gray-400">%</span>
+            </div>
           </div>
 
           <button
             onClick={() => setTransform(DEFAULT_IMAGE_TRANSFORM)}
             className="flex items-center gap-1 rounded bg-white px-2 py-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
-            title="Redefinir posição, zoom, rotação, espelhamento, brilho e cor"
+            title="Redefinir posição, zoom, rotação, espelhamento, contraste e cor"
           >
             <RefreshCw size={12} />
             Redefinir
@@ -571,7 +612,7 @@ export default function ImagePanel({
                     x2={coord.x + offset.x}
                     y2={coord.y + offset.y}
                     stroke={m.color}
-                    strokeWidth={1.2}
+                    strokeWidth={arrowThickness}
                     vectorEffect="non-scaling-stroke"
                     markerEnd={`url(#arrow-${slot}-${m.id})`}
                   />

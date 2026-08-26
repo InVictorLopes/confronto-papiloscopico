@@ -35,7 +35,7 @@ export interface ImageTransform {
   panY: number
   flipped: boolean // espelhado horizontalmente
   inverted: boolean // cores em negativo
-  brightness: number // porcentagem, 100 = original, menor = mais escuro
+  contrast: number // porcentagem, 100 = original, maior = preto mais escuro
 }
 
 export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
@@ -45,5 +45,5 @@ export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
   panY: 0,
   flipped: false,
   inverted: false,
-  brightness: 100,
+  contrast: 100,
 }

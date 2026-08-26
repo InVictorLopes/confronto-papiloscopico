@@ -14,6 +14,9 @@ import { useTheme } from './useTheme'
 const DEFAULT_MARKER_SIZE = 18
 const MIN_MARKER_SIZE = 12
 const MAX_MARKER_SIZE = 40
+const DEFAULT_ARROW_THICKNESS = 1.5
+const MIN_ARROW_THICKNESS = 0.5
+const MAX_ARROW_THICKNESS = 5
 
 function buildDefaultExportName() {
   const d = new Date()
@@ -54,6 +57,7 @@ export default function App() {
   const [markerSize, setMarkerSize] = useState(DEFAULT_MARKER_SIZE)
   const [showNumbers, setShowNumbers] = useState(true)
   const [arrowMode, setArrowMode] = useState(false)
+  const [arrowThickness, setArrowThickness] = useState(DEFAULT_ARROW_THICKNESS)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
   const [transformA, setTransformA] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
   const [transformB, setTransformB] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
@@ -232,7 +236,7 @@ export default function App() {
               rotation={transformA.rotation}
               flipped={transformA.flipped}
               inverted={transformA.inverted}
-              brightness={transformA.brightness}
+              contrast={transformA.contrast}
             />
             <Magnifier
               image={state.imageB}
@@ -242,7 +246,7 @@ export default function App() {
               rotation={transformB.rotation}
               flipped={transformB.flipped}
               inverted={transformB.inverted}
-              brightness={transformB.brightness}
+              contrast={transformB.contrast}
             />
           </div>
         </div>
@@ -267,6 +271,7 @@ export default function App() {
           markerSize={markerSize}
           showNumbers={showNumbers}
           arrowMode={arrowMode}
+          arrowThickness={arrowThickness}
           transform={transformA}
           onTransformChange={setTransformA}
           otherImage={state.imageB}
@@ -287,6 +292,7 @@ export default function App() {
           markerSize={markerSize}
           showNumbers={showNumbers}
           arrowMode={arrowMode}
+          arrowThickness={arrowThickness}
           transform={transformB}
           onTransformChange={setTransformB}
           otherImage={state.imageA}
@@ -322,7 +328,20 @@ export default function App() {
             onChange={(e) => setMarkerSize(Number(e.target.value))}
             className="w-32"
           />
-          <span className="w-10 text-right text-gray-500 dark:text-gray-400">{markerSize}px</span>
+          <div className="flex items-center gap-0.5">
+            <input
+              type="number"
+              value={markerSize}
+              onChange={(e) => {
+                if (e.target.value === '') return
+                const v = Number(e.target.value)
+                if (Number.isNaN(v)) return
+                setMarkerSize(Math.min(MAX_MARKER_SIZE, Math.max(MIN_MARKER_SIZE, v)))
+              }}
+              className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+            />
+            <span className="text-gray-500 dark:text-gray-400">px</span>
+          </div>
         </div>
 
         <button
@@ -350,6 +369,37 @@ export default function App() {
           <MoveUpRight size={14} />
           Modo seta
         </button>
+
+        <div className="flex items-center gap-3">
+          <label htmlFor="arrow-thickness" className="font-medium text-gray-600 dark:text-gray-300">
+            Grossura da seta
+          </label>
+          <input
+            id="arrow-thickness"
+            type="range"
+            min={MIN_ARROW_THICKNESS}
+            max={MAX_ARROW_THICKNESS}
+            step={0.5}
+            value={arrowThickness}
+            onChange={(e) => setArrowThickness(Number(e.target.value))}
+            className="w-32"
+          />
+          <div className="flex items-center gap-0.5">
+            <input
+              type="number"
+              step={0.5}
+              value={arrowThickness}
+              onChange={(e) => {
+                if (e.target.value === '') return
+                const v = Number(e.target.value)
+                if (Number.isNaN(v)) return
+                setArrowThickness(Math.min(MAX_ARROW_THICKNESS, Math.max(MIN_ARROW_THICKNESS, v)))
+              }}
+              className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+            />
+            <span className="text-gray-500 dark:text-gray-400">px</span>
+          </div>
+        </div>
       </div>
     </div>
   )
