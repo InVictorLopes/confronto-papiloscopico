@@ -11,7 +11,7 @@ import ExportDialog from './components/ExportDialog'
 import { DEFAULT_MARKER_COLOR } from './colorPalette'
 import { useTheme } from './useTheme'
 
-const MANUAL_URL = 'https://claude.ai/code/artifact/f34adef2-ef2b-45fb-9b80-43e519df7b9c'
+const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
 
 const DEFAULT_MARKER_SIZE = 18
 const MIN_MARKER_SIZE = 12

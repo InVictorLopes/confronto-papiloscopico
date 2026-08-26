@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Manual do Confronto Papiloscópico</title>
+<meta name="description" content="Guia de referência para carregar imagens, marcar pontos, ajustar e exportar confrontos papiloscópicos." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2324456f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4'/%3E%3Cpath d='M14 13.12c0 2.38 0 6.38-1 8.88'/%3E%3Cpath d='M17.29 21.02c.12-.6.43-2.3.5-3.02'/%3E%3Cpath d='M2 12a10 10 0 0 1 18-6'/%3E%3Cpath d='M2 16h.01'/%3E%3Cpath d='M21.8 16c.2-2 .131-5.354 0-6'/%3E%3Cpath d='M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2'/%3E%3Cpath d='M8.65 22c.21-.66.45-1.32.57-2'/%3E%3Cpath d='M9 6.8a6 6 0 0 1 9 5.2v2'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #EDE9DC;
+    --surface: #F8F5EC;
+    --surface-2: #E3DECC;
+    --ink: #201C15;
+    --ink-soft: #5C5648;
+    --ink-faint: #8A8471;
+    --line: #D3CBB2;
+    --accent: #24456F;
+    --accent-soft: #D9E1EC;
+    --accent-ink: #FFFFFF;
+    --warn: #7E2C24;
+    --warn-soft: #F0DAD2;
+    --shadow: 0 1px 2px rgba(32, 28, 21, 0.06), 0 8px 24px -12px rgba(32, 28, 21, 0.18);
+    --serif: 'Special Elite', 'Courier New', monospace;
+    --sans: 'Public Sans', -apple-system, 'Segoe UI', sans-serif;
+    --mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #14161A;
+      --surface: #1B1E24;
+      --surface-2: #23262E;
+      --ink: #EAE6DA;
+      --ink-soft: #A2A093;
+      --ink-faint: #6D6B60;
+      --line: #2E323B;
+      --accent: #8FADD4;
+      --accent-soft: #223146;
+      --accent-ink: #0E141C;
+      --warn: #D68A78;
+      --warn-soft: #3A241F;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #14161A;
+    --surface: #1B1E24;
+    --surface-2: #23262E;
+    --ink: #EAE6DA;
+    --ink-soft: #A2A093;
+    --ink-faint: #6D6B60;
+    --line: #2E323B;
+    --accent: #8FADD4;
+    --accent-soft: #223146;
+    --accent-ink: #0E141C;
+    --warn: #D68A78;
+    --warn-soft: #3A241F;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  :root[data-theme="light"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { text-wrap: balance; }
+
+  a { color: var(--accent); }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  /* ---------- Cabeçalho / ficha ---------- */
+
+  .cover {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 2.75rem 2.25rem 2rem;
+    margin-bottom: 2.5rem;
+    box-shadow: var(--shadow);
+  }
+
+  .whorl {
+    position: absolute;
+    right: -60px;
+    top: -60px;
+    width: 320px;
+    height: 320px;
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .whorl path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 0.6;
+    stroke-linecap: round;
+    opacity: 0.4;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .cover h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+    margin: 0.35rem 0 0.6rem;
+    letter-spacing: 0.01em;
+    position: relative;
+  }
+
+  .cover .lede {
+    max-width: 62ch;
+    color: var(--ink-soft);
+    font-size: 1.05rem;
+    position: relative;
+  }
+
+  .fichario {
+    margin-top: 1.75rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    border-top: 1px solid var(--line);
+    position: relative;
+  }
+
+  .fichario dl {
+    margin: 0;
+    padding: 0.85rem 1.25rem 0.85rem 0;
+    border-left: 1px solid var(--line);
+  }
+  .fichario dl:first-child { border-left: none; padding-left: 0; }
+
+  .fichario dt {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .fichario dd {
+    margin: 0.2rem 0 0;
+    font-size: 0.92rem;
+    font-family: var(--mono);
+  }
+
+  /* ---------- Layout com trilho ---------- */
+
+  .layout {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 3rem;
+    align-items: start;
+  }
+
+  .rail {
+    position: sticky;
+    top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .rail a {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.86rem;
+    padding: 0.4rem 0.5rem;
+    border-radius: 3px;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .rail a:hover { background: var(--surface-2); color: var(--ink); }
+  .rail a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .rail a span.num {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    min-width: 1.2rem;
+  }
+  .rail a.active span.num { color: var(--accent); }
+
+  main { min-width: 0; }
+
+  section {
+    padding-top: 1.2rem;
+    margin-bottom: 3.2rem;
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 1.25rem;
+  }
+
+  section:first-of-type { border-top: none; }
+
+  .sec-head {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 3px;
+    width: 2.1rem;
+    height: 2.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  h2 {
+    font-size: 1.36rem;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+
+  section > p, section > .lead {
+    max-width: 68ch;
+  }
+
+  .lead {
+    color: var(--ink-soft);
+    margin-top: -0.35rem;
+    margin-bottom: 1.1rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 1.6rem 0 0.5rem;
+  }
+
+  ol.steps {
+    max-width: 68ch;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  ol.steps li {
+    counter-increment: step;
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+  }
+  ol.steps li::before {
+    content: counter(step);
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 0.82rem;
+    color: var(--accent-ink);
+    background: var(--accent);
+    width: 1.55rem;
+    height: 1.55rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.1rem 0.45rem;
+    white-space: nowrap;
+  }
+
+  .icon {
+    width: 1.15em;
+    height: 1.15em;
+    stroke: var(--accent);
+    fill: none;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.22em;
+    flex-shrink: 0;
+  }
+
+  .callout {
+    max-width: 68ch;
+    display: flex;
+    gap: 0.7rem;
+    background: var(--warn-soft);
+    border-left: 3px solid var(--warn);
+    border-radius: 0 4px 4px 0;
+    padding: 0.8rem 1rem;
+    margin: 1.1rem 0;
+    font-size: 0.92rem;
+  }
+  .callout .icon { stroke: var(--warn); margin-top: 0.15em; }
+  .callout strong { color: var(--warn); }
+
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem;
+    max-width: 100%;
+    margin-top: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+  }
+  .card h4 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.4rem;
+    font-size: 0.95rem;
+  }
+  .card p { margin: 0; font-size: 0.88rem; color: var(--ink-soft); }
+
+  /* diagrama de marcação em duas etapas */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    margin: 1.3rem 0 0.5rem;
+    flex-wrap: wrap;
+  }
+  .frame {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.75rem;
+    width: 190px;
+  }
+  .frame .caption {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 0.5rem;
+  }
+  .panelpair { display: flex; gap: 0.4rem; }
+  .mini-panel {
+    flex: 1;
+    aspect-ratio: 4 / 5;
+    background: var(--surface-2);
+    border: 1.5px dashed var(--line);
+    border-radius: 3px;
+    position: relative;
+  }
+  .mini-panel.filled { border-style: solid; }
+  .mini-panel span.dot {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--warn);
+    border: 1.5px solid var(--surface);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    top: 42%;
+    left: 46%;
+    transform: translate(-50%, -50%);
+  }
+  .flow-arrow { color: var(--ink-faint); font-size: 1.4rem; }
+
+  /* referência rápida */
+  table.ref {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  table.ref th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+  table.ref td {
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  table.ref tr:last-child td { border-bottom: none; }
+  .ref-scroll { overflow-x: auto; }
+
+  .swatch {
+    display: inline-block;
+    width: 0.9rem;
+    height: 0.9rem;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.15);
+    vertical-align: -0.12em;
+    margin-right: 0.3rem;
+  }
+
+  footer {
+    max-width: 68ch;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--line);
+    color: var(--ink-faint);
+    font-size: 0.85rem;
+  }
+
+  @media (max-width: 880px) {
+    .layout { grid-template-columns: 1fr; }
+    .rail {
+      position: static;
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      padding-bottom: 1.25rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    .rail a { padding: 0.3rem 0.6rem; background: var(--surface-2); }
+    .rail a.active { background: var(--accent-soft); }
+    .whorl { width: 200px; height: 200px; right: -40px; top: -40px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cover">
+    <svg class="whorl" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/>
+      <path d="M14 13.12c0 2.38 0 6.38-1 8.88"/>
+      <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/>
+      <path d="M2 12a10 10 0 0 1 18-6"/>
+      <path d="M2 16h.01"/>
+      <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
+      <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/>
+      <path d="M8.65 22c.21-.66.45-1.32.57-2"/>
+      <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
+    </svg>
+    <div class="eyebrow">Manual de uso</div>
+    <h1>Confronto Papiloscópico</h1>
+    <p class="lede">Guia de referência para marcar, comparar e exportar confrontos de impressões digitais — Imagem Questionada contra Imagem Padrão, direto no navegador.</p>
+
+    <div class="fichario">
+      <dl>
+        <dt>Aplicação</dt>
+        <dd><a href="./">invictorlopes.github.io/confronto-papiloscopico</a></dd>
+      </dl>
+      <dl>
+        <dt>Processamento</dt>
+        <dd>100% local, no navegador</dd>
+      </dl>
+      <dl>
+        <dt>Formato de saída</dt>
+        <dd>.jpg</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div class="layout">
+    <nav class="rail" id="rail">
+      <a href="#inicio"><span class="num">01</span>Comece por aqui</a>
+      <a href="#carregar"><span class="num">02</span>Carregar imagens</a>
+      <a href="#marcar"><span class="num">03</span>Marcar pontos</a>
+      <a href="#ajustar"><span class="num">04</span>Ajustar a imagem</a>
+      <a href="#molde"><span class="num">05</span>O molde</a>
+      <a href="#lupas"><span class="num">06</span>Lupas de precisão</a>
+      <a href="#aparencia"><span class="num">07</span>Aparência dos pontos</a>
+      <a href="#exportar"><span class="num">08</span>Exportar</a>
+      <a href="#tema"><span class="num">09</span>Tema e privacidade</a>
+      <a href="#referencia"><span class="num">10</span>Referência rápida</a>
+    </nav>
+
+    <main>
+
+      <section id="inicio">
+        <div class="sec-head"><span class="sec-num">01</span><h2>Comece por aqui</h2></div>
+        <p class="lead">O fluxo essencial, do zero ao laudo exportado.</p>
+        <ol class="steps">
+          <li>Carregue a <strong>Imagem Questionada</strong> (A) e a <strong>Imagem Padrão</strong> (B) — clique no quadro vazio de cada uma.</li>
+          <li>Clique num ponto característico na Imagem A. Ele fica pendente, esperando o correspondente.</li>
+          <li>Clique no mesmo ponto na Imagem B. O par fica completo e o contador avança.</li>
+          <li>Arraste qualquer ponto (nas duas imagens) sempre que precisar corrigir a posição.</li>
+          <li>Clique em <span class="chip">Exportar Confronto</span>, dê um nome ao arquivo e pronto — um <code>.jpg</code> com as duas imagens e todos os pontos marcados.</li>
+        </ol>
+      </section>
+
+      <section id="carregar">
+        <div class="sec-head"><span class="sec-num">02</span><h2>Carregar as imagens</h2></div>
+        <p class="lead">As duas imagens sempre aparecem no mesmo tamanho de quadro, não importa a resolução ou proporção do arquivo original.</p>
+        <p>Clique em qualquer um dos dois quadros (ou no botão <span class="chip">Carregar imagem</span> / <span class="chip">Trocar imagem</span> no canto de cada painel) para escolher um arquivo do seu computador. Antes de carregar, o quadro mostra um ícone de impressão digital como espaço reservado.</p>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div>As imagens nunca saem do seu navegador — não há upload para nenhum servidor.</div>
+        </div>
+      </section>
+
+      <section id="marcar">
+        <div class="sec-head"><span class="sec-num">03</span><h2>Marcar os pontos</h2></div>
+        <p class="lead">A marcação acontece sempre em duas etapas, alternando entre A e B.</p>
+
+        <div class="flow">
+          <div class="frame">
+            <div class="caption">Passo 1 · clique em A</div>
+            <div class="panelpair">
+              <div class="mini-panel filled"><span class="dot">1</span></div>
+              <div class="mini-panel"></div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="frame">
+            <div class="caption">Passo 2 · clique em B</div>
+            <div class="panelpair">
+              <div class="mini-panel filled"><span class="dot">1</span></div>
+              <div class="mini-panel filled"><span class="dot">1</span></div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Corrigindo um ponto</h3>
+        <p>Clique e arraste o marcador diretamente sobre a imagem — em qualquer um dos dois lados, a qualquer momento, mesmo depois do par estar completo. Não precisa apagar e marcar de novo.</p>
+
+        <h3>Desfazer e excluir</h3>
+        <p><span class="chip">Desfazer último ponto</span> remove o ponto mais recente (mesmo que ainda esteja pendente, aguardando o lado B). Para remover um ponto específico da lista, use o botão de lixeira na linha correspondente da tabela, abaixo das imagens.</p>
+      </section>
+
+      <section id="ajustar">
+        <div class="sec-head"><span class="sec-num">04</span><h2>Ajustar a imagem</h2></div>
+        <p class="lead">Clique em <span class="chip">Ajustar imagem</span>, no canto de qualquer painel, para abrir a barra de ajuste daquele lado.</p>
+
+        <div class="grid-cards">
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M9 11h4"/></svg>Zoom</h4>
+            <p>Botões, controle deslizante ou o campo numérico — de 50% a 500%.</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Rotação</h4>
+            <p>Giro livre de −180° a 180°, ou 90° de cada vez com os botões das pontas.</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><path d="M8 3v18M16 3v18"/><path d="M3 8l3-3-3-3M21 8l-3-3 3-3" transform="translate(0,3)"/></svg>Espelhar</h4>
+            <p>Inverte horizontalmente — para digitais capturadas em espelho (câmera frontal).</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg>Inverter cor</h4>
+            <p>Alterna para negativo — útil em digitais escaneadas com fundo escuro.</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Contraste</h4>
+            <p>De 50% a 250% — aumente para deixar as cristas (o preto) mais escuras e definidas, sem clarear nem escurecer a imagem inteira.</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>Redefinir</h4>
+            <p>Volta zoom, rotação, espelhamento e contraste desse lado ao estado original.</p>
+          </div>
+        </div>
+
+        <p style="margin-top:1.1rem">Todo controle numérico tem um campinho ao lado do slider — dá pra arrastar <em>ou</em> digitar o valor exato.</p>
+      </section>
+
+      <section id="molde">
+        <div class="sec-head"><span class="sec-num">05</span><h2>O molde</h2></div>
+        <p class="lead">Com o ajuste aberto, o botão <span class="chip">Molde</span> sobrepõe a <em>outra</em> imagem, semitransparente, por cima da que você está ajustando.</p>
+        <p>Assim dá para alinhar visualmente as duas digitais — corrigir enquadramento, rotação ou zoom de um lado enquanto compara diretamente com o outro. Desligue o molde a qualquer momento se ele atrapalhar a visualização.</p>
+      </section>
+
+      <section id="lupas">
+        <div class="sec-head"><span class="sec-num">06</span><h2>Lupas de precisão</h2></div>
+        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem no topo da tela.</p>
+        <p>A da esquerda mostra sempre a <strong>Imagem A</strong>, a da direita sempre a <strong>Imagem B</strong> — a que está sendo editada fica com borda azul (“Editando”), a outra com borda âmbar (“Referência”), para comparar a cristalização da minúcia enquanto você posiciona. As duas respeitam a rotação, o espelhamento e a inversão de cor já aplicados naquele lado. Soltam sozinhas assim que você solta o ponto.</p>
+      </section>
+
+      <section id="aparencia">
+        <div class="sec-head"><span class="sec-num">07</span><h2>Aparência dos pontos</h2></div>
+        <p class="lead">Controles na tabela de pontos e na barra logo abaixo dela, valendo para as duas imagens ao mesmo tempo.</p>
+
+        <h3>Cor de cada par</h3>
+        <p>Na tabela, cada linha tem dois atalhos — <span class="swatch" style="background:#dc2626"></span><span class="chip">Vermelho</span> e <span class="swatch" style="background:#2563eb"></span><span class="chip">Azul</span> — além de um seletor de cor livre para qualquer tom.</p>
+
+        <h3>Ocultar números</h3>
+        <p>O botão de olho em cada linha da tabela esconde o número <em>daquele</em> ponto; o botão <span class="chip">Mostrar números</span>, na barra debaixo da tabela, esconde ou mostra o número de <em>todos</em> de uma vez.</p>
+
+        <h3>Modo seta</h3>
+        <p>Ligue <span class="chip">Modo seta</span> antes de arrastar um ponto para mover só o <em>número</em>, deixando o ponto real fixo onde foi marcado — útil quando dois pontos ficam muito próximos e os números se sobrepõem. Uma seta liga o número à posição real. Desligado (padrão), arrastar move o ponto normalmente.</p>
+
+        <h3>Tamanho e grossura</h3>
+        <p>Os sliders <span class="chip">Tamanho do ponto</span> e <span class="chip">Grossura da seta</span> — cada um com campo numérico ao lado — ajustam a aparência de todos os marcadores, incluindo na exportação final.</p>
+      </section>
+
+      <section id="exportar">
+        <div class="sec-head"><span class="sec-num">08</span><h2>Exportar o confronto</h2></div>
+        <p class="lead">O botão <span class="chip">Exportar Confronto</span> fica sempre visível, mas só libera quando existe ao menos um par completo.</p>
+        <p>Ao clicar, abre uma caixa para nomear o arquivo, já sugerindo <span class="chip">confronto_papiloscopico__DD_MM_AAAA</span> com a data de hoje — o cursor entra exatamente no espaço entre os dois underscores, pronto para você digitar um número de caso, por exemplo. Confirme com <span class="chip">Exportar</span> ou <kbd>Enter</kbd>; o resultado é um <code>.jpg</code> com as duas imagens lado a lado e todos os pontos marcados, incluindo cores, números e setas.</p>
+      </section>
+
+      <section id="tema">
+        <div class="sec-head"><span class="sec-num">09</span><h2>Tema e privacidade</h2></div>
+        <p class="lead">O ícone de sol/lua no canto superior direito alterna entre tema claro e escuro — a escolha fica salva no navegador.</p>
+        <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
+      </section>
+
+      <section id="referencia">
+        <div class="sec-head"><span class="sec-num">10</span><h2>Referência rápida</h2></div>
+        <p class="lead">Todos os controles, num só lugar.</p>
+        <div class="ref-scroll">
+          <table class="ref">
+            <thead>
+              <tr><th>Controle</th><th>Onde</th><th>O que faz</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="chip">Carregar imagem</td><td>Painel A / B</td><td>Escolhe o arquivo de imagem local</td></tr>
+              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom, rotação, espelhar, inverter, contraste</td></tr>
+              <tr><td class="chip">Molde</td><td>Barra de ajuste</td><td>Sobrepõe a outra imagem, semitransparente</td></tr>
+              <tr><td class="chip">Redefinir</td><td>Barra de ajuste</td><td>Zera zoom, rotação, espelhamento e contraste</td></tr>
+              <tr><td class="chip">Desfazer último ponto</td><td>Barra de status</td><td>Remove o ponto mais recente</td></tr>
+              <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de nome e gera o .jpg</td></tr>
+              <tr><td class="chip">Mostrar números</td><td>Barra inferior</td><td>Esconde/mostra o número de todos os pontos</td></tr>
+              <tr><td class="chip">Modo seta</td><td>Barra inferior</td><td>Arrastar passa a mover só o número, com seta até o ponto</td></tr>
+              <tr><td class="chip">Tamanho do ponto</td><td>Barra inferior</td><td>Diâmetro do marcador (12–40px)</td></tr>
+              <tr><td class="chip">Grossura da seta</td><td>Barra inferior</td><td>Espessura da linha do modo seta (0.5–5px)</td></tr>
+              <tr><td>Ícone de olho</td><td>Tabela de pontos</td><td>Oculta o número de um ponto específico</td></tr>
+              <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par</td></tr>
+              <tr><td>Sol / Lua</td><td>Cabeçalho</td><td>Alterna tema claro/escuro</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <footer>
+        Confronto Papiloscópico é uma ferramenta de código aberto, executada inteiramente no navegador. Dúvidas ou sugestões de ajuste ficam com quem mantém o repositório.
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var links = Array.prototype.slice.call(document.querySelectorAll('#rail a'));
+    var sections = links.map(function (a) { return document.querySelector(a.getAttribute('href')); });
+
+    if (!('IntersectionObserver' in window)) return;
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        var idx = sections.indexOf(entry.target);
+        if (idx === -1) return;
+        if (entry.isIntersecting) {
+          links.forEach(function (l) { l.classList.remove('active'); });
+          links[idx].classList.add('active');
+        }
+      });
+    }, { rootMargin: '-10% 0px -70% 0px', threshold: 0 });
+
+    sections.forEach(function (s) { if (s) observer.observe(s); });
+  })();
+</script>
+</body>
+</html>
