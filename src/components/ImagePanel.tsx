@@ -675,6 +675,7 @@ export default function ImagePanel({
                       left: `${labelX}%`,
                       top: `${labelY}%`,
                       cursor: adjustMode ? cursor : arrowMode ? 'crosshair' : 'move',
+                      touchAction: 'none',
                     }}
                   >
                     <div style={{ transform: counterTransform }}>

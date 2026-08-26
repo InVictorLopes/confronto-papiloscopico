@@ -180,6 +180,7 @@ export default function App() {
         backgroundColor: '#ffffff',
         useCORS: true,
         scale: 2,
+        windowWidth: 1400,
       })
       const jpegUrl = canvas.toDataURL('image/jpeg', 0.95)
       const link = document.createElement('a')
