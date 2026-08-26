@@ -284,6 +284,9 @@
     gap: 0.9rem;
     align-items: flex-start;
   }
+  ol.steps li > span {
+    min-width: 0;
+  }
   ol.steps li::before {
     content: counter(step);
     font-family: var(--mono);
@@ -531,12 +534,12 @@
         <div class="sec-head"><span class="sec-num">01</span><h2>Comece por aqui</h2></div>
         <p class="lead">O fluxo essencial, do zero ao laudo exportado.</p>
         <ol class="steps">
-          <li>Clique no quadro vazio e carregue a <strong>Imagem Questionada&nbsp;(A)</strong>.</li>
-          <li>Faça o mesmo no outro quadro para carregar a <strong>Imagem Padrão&nbsp;(B)</strong>.</li>
-          <li>Clique num ponto característico na Imagem A. Ele fica pendente, esperando o correspondente.</li>
-          <li>Clique no mesmo ponto na Imagem B. O par fica completo e o contador avança.</li>
-          <li>Arraste qualquer ponto (nas duas imagens) sempre que precisar corrigir a posição.</li>
-          <li>Clique em <span class="chip">Exportar Confronto</span>, dê um nome ao arquivo e pronto — um <code>.jpg</code> com as duas imagens e todos os pontos marcados.</li>
+          <li><span>Clique no quadro vazio e carregue a <strong>Imagem Questionada&nbsp;(A)</strong>.</span></li>
+          <li><span>Faça o mesmo no outro quadro para carregar a <strong>Imagem Padrão&nbsp;(B)</strong>.</span></li>
+          <li><span>Clique num ponto característico na Imagem A. Ele fica pendente, esperando o correspondente.</span></li>
+          <li><span>Clique no mesmo ponto na Imagem B. O par fica completo e o contador avança.</span></li>
+          <li><span>Arraste qualquer ponto (nas duas imagens) sempre que precisar corrigir a posição.</span></li>
+          <li><span>Clique em <span class="chip">Exportar Confronto</span>, dê um nome ao arquivo e pronto — um <code>.jpg</code> com as duas imagens e todos os pontos marcados.</span></li>
         </ol>
       </section>
 
