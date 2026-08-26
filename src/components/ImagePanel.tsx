@@ -203,7 +203,7 @@ export default function ImagePanel({
   const otherPanYpx = (otherTransform.panY / 100) * ghostBaseSize.height
 
   const screenToPercent = useCallback(
-    (clientX: number, clientY: number): Coordinate | null => {
+    (clientX: number, clientY: number, allowMargin = false): Coordinate | null => {
       if (!viewportRef.current || baseSize.width === 0) return null
       const viewportRect = viewportRef.current.getBoundingClientRect()
       const stageLeft = (viewportRect.width - baseSize.width) / 2
@@ -230,7 +230,22 @@ export default function ImagePanel({
       const percentX = ((localX + baseSize.width / 2) / baseSize.width) * 100
       const percentY = ((localY + baseSize.height / 2) / baseSize.height) * 100
 
-      return { x: clamp(percentX, 0, 100), y: clamp(percentY, 0, 100) }
+      // No modo seta, o número pode ir até a borda do quadro inteiro (viewport),
+      // não só até a borda da imagem — útil quando a foto não preenche o quadro todo.
+      let minX = 0
+      let maxX = 100
+      let minY = 0
+      let maxY = 100
+      if (allowMargin) {
+        const marginXPercent = ((viewportRect.width - baseSize.width) / 2 / baseSize.width) * 100
+        const marginYPercent = ((viewportRect.height - baseSize.height) / 2 / baseSize.height) * 100
+        minX = -marginXPercent
+        maxX = 100 + marginXPercent
+        minY = -marginYPercent
+        maxY = 100 + marginYPercent
+      }
+
+      return { x: clamp(percentX, minX, maxX), y: clamp(percentY, minY, maxY) }
     },
     [baseSize, panXpx, panYpx, transform.rotation, transform.zoom, transform.flipped],
   )
@@ -287,7 +302,7 @@ export default function ImagePanel({
   function handleMarkerPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
-    const cursor = screenToPercent(e.clientX, e.clientY)
+    const cursor = screenToPercent(e.clientX, e.clientY, arrowMode)
     if (!cursor) return
     if (arrowMode) {
       const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
