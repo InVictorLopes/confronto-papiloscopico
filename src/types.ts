@@ -8,7 +8,13 @@ export interface Minutia {
   color: string
   coordA: Coordinate | null
   coordB: Coordinate | null
+  // Deslocamento do número em relação ao ponto real, em % da imagem (0,0 = sobre o ponto).
+  labelOffsetA: Coordinate
+  labelOffsetB: Coordinate
+  hideNumber: boolean
 }
+
+export const ZERO_OFFSET: Coordinate = { x: 0, y: 0 }
 
 export type ComparisonStep = 'WAITING_A' | 'WAITING_B'
 
@@ -29,6 +35,7 @@ export interface ImageTransform {
   panY: number
   flipped: boolean // espelhado horizontalmente
   inverted: boolean // cores em negativo
+  brightness: number // porcentagem, 100 = original, menor = mais escuro
 }
 
 export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
@@ -38,4 +45,5 @@ export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
   panY: 0,
   flipped: false,
   inverted: false,
+  brightness: 100,
 }

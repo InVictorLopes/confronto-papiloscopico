@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
-import { Fingerprint, Moon, Sun } from 'lucide-react'
+import { Fingerprint, Hash, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, ImageSlot, ImageTransform } from './types'
 import { DEFAULT_IMAGE_TRANSFORM } from './types'
 import ImagePanel from './components/ImagePanel'
@@ -52,6 +52,8 @@ export default function App() {
   const [exporting, setExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [markerSize, setMarkerSize] = useState(DEFAULT_MARKER_SIZE)
+  const [showNumbers, setShowNumbers] = useState(true)
+  const [arrowMode, setArrowMode] = useState(false)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
   const [transformA, setTransformA] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
   const [transformB, setTransformB] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
@@ -78,6 +80,9 @@ export default function App() {
           color: DEFAULT_MARKER_COLOR,
           coordA: coord,
           coordB: null,
+          labelOffsetA: { x: 0, y: 0 },
+          labelOffsetB: { x: 0, y: 0 },
+          hideNumber: false,
         },
       ],
       currentStep: 'WAITING_B',
@@ -102,6 +107,22 @@ export default function App() {
       minutiae: prev.minutiae.map((m) =>
         m.id === id ? { ...m, [slot === 'A' ? 'coordA' : 'coordB']: coord } : m,
       ),
+    }))
+  }
+
+  function handleMoveLabel(slot: ImageSlot, id: number, offset: Coordinate) {
+    setState((prev) => ({
+      ...prev,
+      minutiae: prev.minutiae.map((m) =>
+        m.id === id ? { ...m, [slot === 'A' ? 'labelOffsetA' : 'labelOffsetB']: offset } : m,
+      ),
+    }))
+  }
+
+  function handleToggleNumber(id: number) {
+    setState((prev) => ({
+      ...prev,
+      minutiae: prev.minutiae.map((m) => (m.id === id ? { ...m, hideNumber: !m.hideNumber } : m)),
     }))
   }
 
@@ -211,6 +232,7 @@ export default function App() {
               rotation={transformA.rotation}
               flipped={transformA.flipped}
               inverted={transformA.inverted}
+              brightness={transformA.brightness}
             />
             <Magnifier
               image={state.imageB}
@@ -220,6 +242,7 @@ export default function App() {
               rotation={transformB.rotation}
               flipped={transformB.flipped}
               inverted={transformB.inverted}
+              brightness={transformB.brightness}
             />
           </div>
         </div>
@@ -242,6 +265,8 @@ export default function App() {
           image={state.imageA}
           minutiae={state.minutiae}
           markerSize={markerSize}
+          showNumbers={showNumbers}
+          arrowMode={arrowMode}
           transform={transformA}
           onTransformChange={setTransformA}
           otherImage={state.imageB}
@@ -250,6 +275,7 @@ export default function App() {
           onUpload={(file) => handleUpload('A', file)}
           onCreatePoint={handleCreatePointA}
           onMovePoint={(id, coord) => handleMovePoint('A', id, coord)}
+          onMoveLabel={(id, offset) => handleMoveLabel('A', id, offset)}
           onStartEdit={(id) => handleStartEdit('A', id)}
           onEndEdit={handleEndEdit}
         />
@@ -259,6 +285,8 @@ export default function App() {
           image={state.imageB}
           minutiae={state.minutiae}
           markerSize={markerSize}
+          showNumbers={showNumbers}
+          arrowMode={arrowMode}
           transform={transformB}
           onTransformChange={setTransformB}
           otherImage={state.imageA}
@@ -267,6 +295,7 @@ export default function App() {
           onUpload={(file) => handleUpload('B', file)}
           onCreatePoint={handleCreatePointB}
           onMovePoint={(id, coord) => handleMovePoint('B', id, coord)}
+          onMoveLabel={(id, offset) => handleMoveLabel('B', id, offset)}
           onStartEdit={(id) => handleStartEdit('B', id)}
           onEndEdit={handleEndEdit}
         />
@@ -276,22 +305,51 @@ export default function App() {
         minutiae={state.minutiae}
         onChangeColor={handleChangeColor}
         onDelete={handleDelete}
+        onToggleNumber={handleToggleNumber}
       />
 
-      <div className="flex items-center gap-3 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-        <label htmlFor="marker-size" className="font-medium text-gray-600 dark:text-gray-300">
-          Tamanho do ponto
-        </label>
-        <input
-          id="marker-size"
-          type="range"
-          min={MIN_MARKER_SIZE}
-          max={MAX_MARKER_SIZE}
-          value={markerSize}
-          onChange={(e) => setMarkerSize(Number(e.target.value))}
-          className="flex-1"
-        />
-        <span className="w-10 text-right text-gray-500 dark:text-gray-400">{markerSize}px</span>
+      <div className="flex flex-col gap-3 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:flex-row sm:items-center sm:flex-wrap">
+        <div className="flex items-center gap-3">
+          <label htmlFor="marker-size" className="font-medium text-gray-600 dark:text-gray-300">
+            Tamanho do ponto
+          </label>
+          <input
+            id="marker-size"
+            type="range"
+            min={MIN_MARKER_SIZE}
+            max={MAX_MARKER_SIZE}
+            value={markerSize}
+            onChange={(e) => setMarkerSize(Number(e.target.value))}
+            className="w-32"
+          />
+          <span className="w-10 text-right text-gray-500 dark:text-gray-400">{markerSize}px</span>
+        </div>
+
+        <button
+          onClick={() => setShowNumbers((v) => !v)}
+          className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
+            showNumbers
+              ? 'bg-blue-600 text-white ring-blue-600'
+              : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
+          }`}
+          title="Mostrar ou ocultar o número de todos os pontos"
+        >
+          <Hash size={14} />
+          Mostrar números
+        </button>
+
+        <button
+          onClick={() => setArrowMode((v) => !v)}
+          className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
+            arrowMode
+              ? 'bg-blue-600 text-white ring-blue-600'
+              : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
+          }`}
+          title="Com o modo seta ligado, arrastar um ponto move só o número (com uma seta até o ponto real)"
+        >
+          <MoveUpRight size={14} />
+          Modo seta
+        </button>
       </div>
     </div>
   )

@@ -21,6 +21,8 @@ import {
   RefreshCw,
   RotateCcw,
   RotateCw,
+  Sun,
+  SunDim,
   Upload,
   ZoomIn,
   ZoomOut,
@@ -34,6 +36,8 @@ interface ImagePanelProps {
   image: string | null
   minutiae: Minutia[]
   markerSize: number
+  showNumbers: boolean
+  arrowMode: boolean
   transform: ImageTransform
   onTransformChange: Dispatch<SetStateAction<ImageTransform>>
   otherImage: string | null
@@ -42,12 +46,15 @@ interface ImagePanelProps {
   onUpload: (file: File) => void
   onCreatePoint: (coord: Coordinate) => void
   onMovePoint: (id: number, coord: Coordinate) => void
+  onMoveLabel: (id: number, offset: Coordinate) => void
   onStartEdit: (id: number) => void
   onEndEdit: () => void
 }
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 5
+const MIN_BRIGHTNESS = 40
+const MAX_BRIGHTNESS = 160
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -57,12 +64,21 @@ function wrapAngle(deg: number) {
   return ((((deg + 180) % 360) + 360) % 360) - 180
 }
 
+function buildFilter(t: ImageTransform): string | undefined {
+  const parts: string[] = []
+  if (t.inverted) parts.push('invert(1)')
+  if (t.brightness !== 100) parts.push(`brightness(${t.brightness}%)`)
+  return parts.length ? parts.join(' ') : undefined
+}
+
 export default function ImagePanel({
   slot,
   title,
   image,
   minutiae,
   markerSize,
+  showNumbers,
+  arrowMode,
   transform,
   onTransformChange: setTransform,
   otherImage,
@@ -71,6 +87,7 @@ export default function ImagePanel({
   onUpload,
   onCreatePoint,
   onMovePoint,
+  onMoveLabel,
   onStartEdit,
   onEndEdit,
 }: ImagePanelProps) {
@@ -268,8 +285,16 @@ export default function ImagePanel({
   function handleMarkerPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
-    const coord = screenToPercent(e.clientX, e.clientY)
-    if (coord) onMovePoint(draggingMinutiaId.current, coord)
+    const cursor = screenToPercent(e.clientX, e.clientY)
+    if (!cursor) return
+    if (arrowMode) {
+      const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
+      const point = m?.[coordKey]
+      if (!point) return
+      onMoveLabel(draggingMinutiaId.current, { x: cursor.x - point.x, y: cursor.y - point.y })
+    } else {
+      onMovePoint(draggingMinutiaId.current, cursor)
+    }
   }
 
   function handleMarkerPointerUp(e: PointerEvent<HTMLDivElement>) {
@@ -280,6 +305,7 @@ export default function ImagePanel({
   }
 
   const coordKey = slot === 'A' ? 'coordA' : 'coordB'
+  const offsetKey = slot === 'A' ? 'labelOffsetA' : 'labelOffsetB'
 
   const cursor = adjustMode
     ? isDragging
@@ -399,10 +425,46 @@ export default function ImagePanel({
             </button>
           </div>
 
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() =>
+                setTransform((t) => ({
+                  ...t,
+                  brightness: clamp(t.brightness - 10, MIN_BRIGHTNESS, MAX_BRIGHTNESS),
+                }))
+              }
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
+              title="Escurecer a digital"
+            >
+              <SunDim size={14} />
+            </button>
+            <input
+              type="range"
+              min={MIN_BRIGHTNESS}
+              max={MAX_BRIGHTNESS}
+              value={transform.brightness}
+              onChange={(e) => setTransform((t) => ({ ...t, brightness: Number(e.target.value) }))}
+              className="w-20"
+            />
+            <button
+              onClick={() =>
+                setTransform((t) => ({
+                  ...t,
+                  brightness: clamp(t.brightness + 10, MIN_BRIGHTNESS, MAX_BRIGHTNESS),
+                }))
+              }
+              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
+              title="Clarear a digital"
+            >
+              <Sun size={14} />
+            </button>
+            <span className="w-9 text-center text-gray-500 dark:text-gray-400">{transform.brightness}%</span>
+          </div>
+
           <button
             onClick={() => setTransform(DEFAULT_IMAGE_TRANSFORM)}
             className="flex items-center gap-1 rounded bg-white px-2 py-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
-            title="Redefinir posição, zoom, rotação, espelhamento e cor"
+            title="Redefinir posição, zoom, rotação, espelhamento, brilho e cor"
           >
             <RefreshCw size={12} />
             Redefinir
@@ -469,42 +531,109 @@ export default function ImagePanel({
               draggable={false}
               onLoad={handleImgLoad}
               className="block h-full w-full select-none pointer-events-none"
-              style={{ filter: transform.inverted ? 'invert(1)' : undefined }}
+              style={{ filter: buildFilter(transform) }}
             />
+
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                {minutiae.map((m) => {
+                  const offset = m[offsetKey]
+                  if (offset.x === 0 && offset.y === 0) return null
+                  return (
+                    <marker
+                      key={m.id}
+                      id={`arrow-${slot}-${m.id}`}
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="5"
+                      markerHeight="5"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M0,0 L10,5 L0,10 z" fill={m.color} />
+                    </marker>
+                  )
+                })}
+              </defs>
+              {minutiae.map((m) => {
+                const coord = m[coordKey]
+                const offset = m[offsetKey]
+                if (!coord || (offset.x === 0 && offset.y === 0)) return null
+                return (
+                  <line
+                    key={m.id}
+                    x1={coord.x}
+                    y1={coord.y}
+                    x2={coord.x + offset.x}
+                    y2={coord.y + offset.y}
+                    stroke={m.color}
+                    strokeWidth={1.2}
+                    vectorEffect="non-scaling-stroke"
+                    markerEnd={`url(#arrow-${slot}-${m.id})`}
+                  />
+                )
+              })}
+            </svg>
 
             {minutiae.map((m) => {
               const coord = m[coordKey]
               if (!coord) return null
+              const offset = m[offsetKey]
+              const hasOffset = offset.x !== 0 || offset.y !== 0
+              const labelX = coord.x + offset.x
+              const labelY = coord.y + offset.y
               const flipFactor = transform.flipped ? -1 : 1
+              const counterTransform = `scale(${1 / transform.zoom}) scaleX(${flipFactor}) rotate(${-transform.rotation}deg)`
+              const numberVisible = showNumbers && !m.hideNumber
               return (
-                <div
-                  key={m.id}
-                  onPointerDown={(e) => handleMarkerPointerDown(e, m.id)}
-                  onPointerMove={handleMarkerPointerMove}
-                  onPointerUp={handleMarkerPointerUp}
-                  onPointerCancel={handleMarkerPointerUp}
-                  onClick={(e) => e.stopPropagation()}
-                  className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
-                  style={{ left: `${coord.x}%`, top: `${coord.y}%`, cursor: adjustMode ? cursor : 'move' }}
-                >
+                <div key={m.id}>
+                  {hasOffset && (
+                    <div
+                      className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                    >
+                      <div style={{ transform: counterTransform }}>
+                        <div
+                          className="rounded-full border border-white shadow"
+                          style={{
+                            width: Math.max(6, markerSize * 0.4),
+                            height: Math.max(6, markerSize * 0.4),
+                            backgroundColor: m.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   <div
+                    onPointerDown={(e) => handleMarkerPointerDown(e, m.id)}
+                    onPointerMove={handleMarkerPointerMove}
+                    onPointerUp={handleMarkerPointerUp}
+                    onPointerCancel={handleMarkerPointerUp}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
                     style={{
-                      // A rotação precisa ser desfeita primeiro (mais interna) e só então a
-                      // escala/espelhamento — rotação e espelhamento não comutam.
-                      transform: `scale(${1 / transform.zoom}) scaleX(${flipFactor}) rotate(${-transform.rotation}deg)`,
+                      left: `${labelX}%`,
+                      top: `${labelY}%`,
+                      cursor: adjustMode ? cursor : arrowMode ? 'crosshair' : 'move',
                     }}
                   >
-                    <div
-                      className="flex items-center justify-center rounded-full border-2 border-white font-bold text-white shadow"
-                      style={{
-                        width: markerSize,
-                        height: markerSize,
-                        backgroundColor: m.color,
-                        fontSize: Math.max(8, markerSize * 0.42),
-                      }}
-                      title={`Ponto ${m.id}`}
-                    >
-                      {m.id}
+                    <div style={{ transform: counterTransform }}>
+                      <div
+                        className="flex items-center justify-center rounded-full border-2 border-white font-bold text-white shadow"
+                        style={{
+                          width: markerSize,
+                          height: markerSize,
+                          backgroundColor: m.color,
+                          fontSize: Math.max(8, markerSize * 0.42),
+                        }}
+                        title={`Ponto ${m.id}`}
+                      >
+                        {numberVisible ? m.id : ''}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -531,7 +660,7 @@ export default function ImagePanel({
                 alt=""
                 draggable={false}
                 className="block h-full w-full select-none"
-                style={{ filter: otherTransform.inverted ? 'invert(1)' : undefined }}
+                style={{ filter: buildFilter(otherTransform) }}
               />
             </div>
           </div>

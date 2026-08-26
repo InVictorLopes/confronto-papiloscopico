@@ -1,10 +1,11 @@
-import { Trash2 } from 'lucide-react'
+import { Eye, EyeOff, Trash2 } from 'lucide-react'
 import type { Minutia } from '../types'
 
 interface MinutiaeTableProps {
   minutiae: Minutia[]
   onChangeColor: (id: number, color: string) => void
   onDelete: (id: number) => void
+  onToggleNumber: (id: number) => void
 }
 
 const QUICK_COLORS = [
@@ -12,7 +13,12 @@ const QUICK_COLORS = [
   { value: '#2563eb', label: 'Azul' },
 ]
 
-export default function MinutiaeTable({ minutiae, onChangeColor, onDelete }: MinutiaeTableProps) {
+export default function MinutiaeTable({
+  minutiae,
+  onChangeColor,
+  onDelete,
+  onToggleNumber,
+}: MinutiaeTableProps) {
   if (minutiae.length === 0) {
     return (
       <div className="rounded-lg bg-white p-4 text-center text-sm text-gray-400 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:ring-gray-700">
@@ -42,7 +48,7 @@ export default function MinutiaeTable({ minutiae, onChangeColor, onDelete }: Min
                     className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white"
                     style={{ backgroundColor: m.color }}
                   >
-                    {m.id}
+                    {m.hideNumber ? '' : m.id}
                   </span>
                 </td>
                 <td className="px-3 py-2">
@@ -77,13 +83,22 @@ export default function MinutiaeTable({ minutiae, onChangeColor, onDelete }: Min
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  <button
-                    onClick={() => onDelete(m.id)}
-                    className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
-                  >
-                    <Trash2 size={14} />
-                    Excluir
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onToggleNumber(m.id)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                      title={m.hideNumber ? 'Mostrar número deste ponto' : 'Ocultar número deste ponto'}
+                    >
+                      {m.hideNumber ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                    <button
+                      onClick={() => onDelete(m.id)}
+                      className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+                    >
+                      <Trash2 size={14} />
+                      Excluir
+                    </button>
+                  </div>
                 </td>
               </tr>
             )

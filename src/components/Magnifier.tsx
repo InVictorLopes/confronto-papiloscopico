@@ -9,6 +9,7 @@ interface MagnifierProps {
   rotation?: number
   flipped?: boolean
   inverted?: boolean
+  brightness?: number
 }
 
 const SIZE = 230
@@ -22,6 +23,7 @@ export default function Magnifier({
   rotation = 0,
   flipped = false,
   inverted = false,
+  brightness = 100,
 }: MagnifierProps) {
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
 
@@ -73,7 +75,9 @@ export default function Magnifier({
             // o ponto para fora do centro da lupa.
             transformOrigin: `${originX}px ${originY}px`,
             transform: `rotate(${rotation}deg) scaleX(${flipped ? -1 : 1})`,
-            filter: inverted ? 'invert(1)' : undefined,
+            filter: [inverted ? 'invert(1)' : null, brightness !== 100 ? `brightness(${brightness}%)` : null]
+              .filter(Boolean)
+              .join(' ') || undefined,
           }}
         />
         <div className="pointer-events-none absolute inset-0">
