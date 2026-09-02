@@ -5,7 +5,6 @@ export interface Coordinate {
 
 export interface Minutia {
   id: number
-  color: string
   coordA: Coordinate | null
   coordB: Coordinate | null
   // Deslocamento do número em relação ao ponto real, em % da imagem (0,0 = sobre o ponto).
@@ -23,7 +22,14 @@ export interface AppState {
   imageB: string | null
   minutiae: Minutia[]
   currentStep: ComparisonStep
-  globalCounter: number
+}
+
+// Formato do arquivo de "edição salva" (JSON), para reabrir e corrigir depois.
+export interface ProjectFile {
+  version: 1
+  state: AppState
+  transformA: ImageTransform
+  transformB: ImageTransform
 }
 
 export type ImageSlot = 'A' | 'B'

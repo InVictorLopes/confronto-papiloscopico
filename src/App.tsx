@@ -1,24 +1,16 @@
 import { useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
 import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
-import type { AppState, Coordinate, ImageSlot, ImageTransform } from './types'
+import type { AppState, Coordinate, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM } from './types'
 import ImagePanel from './components/ImagePanel'
 import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import Magnifier from './components/Magnifier'
 import ExportDialog from './components/ExportDialog'
-import { DEFAULT_MARKER_COLOR } from './colorPalette'
 import { useTheme } from './useTheme'
 
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
-
-const DEFAULT_MARKER_SIZE = 18
-const MIN_MARKER_SIZE = 12
-const MAX_MARKER_SIZE = 40
-const DEFAULT_ARROW_THICKNESS = 1.5
-const MIN_ARROW_THICKNESS = 0.5
-const MAX_ARROW_THICKNESS = 5
 
 function buildDefaultExportName() {
   const d = new Date()
@@ -34,12 +26,20 @@ function sanitizeFilename(name: string) {
   return name.replace(/[\\/:*?"<>|]/g, '_').trim() || 'confronto_papiloscopico'
 }
 
+// Menor número inteiro positivo ainda não usado — preenche a lacuna deixada por um ponto excluído
+// em vez de sempre continuar a contagem para frente.
+function nextAvailableId(minutiae: { id: number }[]): number {
+  const used = new Set(minutiae.map((m) => m.id))
+  let n = 1
+  while (used.has(n)) n++
+  return n
+}
+
 const initialState: AppState = {
   imageA: null,
   imageB: null,
   minutiae: [],
   currentStep: 'WAITING_A',
-  globalCounter: 1,
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -51,19 +51,29 @@ function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+function readFileAsText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsText(file)
+  })
+}
+
 export default function App() {
   const { theme, toggleTheme } = useTheme()
   const [state, setState] = useState<AppState>(initialState)
   const [exporting, setExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
-  const [markerSize, setMarkerSize] = useState(DEFAULT_MARKER_SIZE)
   const [showNumbers, setShowNumbers] = useState(true)
   const [arrowMode, setArrowMode] = useState(false)
-  const [arrowThickness, setArrowThickness] = useState(DEFAULT_ARROW_THICKNESS)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
   const [transformA, setTransformA] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
   const [transformB, setTransformB] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
   const captureRef = useRef<HTMLDivElement>(null)
+  const panelARef = useRef<HTMLDivElement>(null)
+  const panelBRef = useRef<HTMLDivElement>(null)
+  const projectInputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(slot: 'A' | 'B', file: File) {
     const dataUrl = await readFileAsDataUrl(file)
@@ -82,8 +92,7 @@ export default function App() {
       minutiae: [
         ...prev.minutiae,
         {
-          id: prev.globalCounter,
-          color: DEFAULT_MARKER_COLOR,
+          id: nextAvailableId(prev.minutiae),
           coordA: coord,
           coordB: null,
           labelOffsetA: { x: 0, y: 0 },
@@ -99,11 +108,8 @@ export default function App() {
     if (state.currentStep !== 'WAITING_B' || !state.imageB) return
     setState((prev) => ({
       ...prev,
-      minutiae: prev.minutiae.map((m) =>
-        m.id === prev.globalCounter ? { ...m, coordB: coord } : m,
-      ),
+      minutiae: prev.minutiae.map((m) => (m.coordB === null ? { ...m, coordB: coord } : m)),
       currentStep: 'WAITING_A',
-      globalCounter: prev.globalCounter + 1,
     }))
   }
 
@@ -140,11 +146,15 @@ export default function App() {
     setEditing(null)
   }
 
-  function handleChangeColor(id: number, color: string) {
+  function handleChangeId(oldId: number, newId: number): boolean {
+    if (!Number.isInteger(newId) || newId <= 0) return false
+    if (oldId === newId) return true
+    if (state.minutiae.some((m) => m.id === newId)) return false
     setState((prev) => ({
       ...prev,
-      minutiae: prev.minutiae.map((m) => (m.id === id ? { ...m, color } : m)),
+      minutiae: prev.minutiae.map((m) => (m.id === oldId ? { ...m, id: newId } : m)),
     }))
+    return true
   }
 
   function handleDelete(id: number) {
@@ -162,13 +172,17 @@ export default function App() {
   function handleUndo() {
     setState((prev) => {
       if (prev.minutiae.length === 0) return prev
-      const last = prev.minutiae[prev.minutiae.length - 1]
       const rest = prev.minutiae.slice(0, -1)
-      if (last.coordB === null) {
-        return { ...prev, minutiae: rest, currentStep: 'WAITING_A' }
-      }
-      return { ...prev, minutiae: rest, currentStep: 'WAITING_A', globalCounter: last.id }
+      return { ...prev, minutiae: rest, currentStep: 'WAITING_A' }
     })
+  }
+
+  function downloadCanvas(canvas: HTMLCanvasElement, filename: string) {
+    const jpegUrl = canvas.toDataURL('image/jpeg', 0.95)
+    const link = document.createElement('a')
+    link.href = jpegUrl
+    link.download = filename
+    link.click()
   }
 
   async function performExport(filename: string) {
@@ -176,19 +190,54 @@ export default function App() {
     if (!captureRef.current) return
     setExporting(true)
     try {
-      const canvas = await html2canvas(captureRef.current, {
+      const safeName = sanitizeFilename(filename)
+      const combined = await html2canvas(captureRef.current, {
         backgroundColor: '#ffffff',
         useCORS: true,
         scale: 2,
         windowWidth: 1400,
       })
-      const jpegUrl = canvas.toDataURL('image/jpeg', 0.95)
-      const link = document.createElement('a')
-      link.href = jpegUrl
-      link.download = `${sanitizeFilename(filename)}.jpg`
-      link.click()
+      downloadCanvas(combined, `${safeName}.jpg`)
+
+      if (panelARef.current) {
+        const canvasA = await html2canvas(panelARef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+        downloadCanvas(canvasA, `${safeName}_questionada.jpg`)
+      }
+      if (panelBRef.current) {
+        const canvasB = await html2canvas(panelBRef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+        downloadCanvas(canvasB, `${safeName}_padrao.jpg`)
+      }
     } finally {
       setExporting(false)
+    }
+  }
+
+  function handleSaveProject() {
+    const project: ProjectFile = { version: 1, state, transformA, transformB }
+    const blob = new Blob([JSON.stringify(project)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const { name } = buildDefaultExportName()
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${sanitizeFilename(name)}_edicao.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleOpenProjectFile(file: File) {
+    try {
+      const text = await readFileAsText(file)
+      const project = JSON.parse(text) as ProjectFile
+      if (!project || project.version !== 1 || !project.state) {
+        window.alert('Arquivo de edição inválido.')
+        return
+      }
+      setState(project.state)
+      setTransformA(project.transformA ?? DEFAULT_IMAGE_TRANSFORM)
+      setTransformB(project.transformB ?? DEFAULT_IMAGE_TRANSFORM)
+      setEditing(null)
+    } catch {
+      window.alert('Não foi possível abrir esse arquivo de edição.')
     }
   }
 
@@ -236,6 +285,20 @@ export default function App() {
         onExport={() => setShowExportDialog(true)}
         canExport={hasImages && completedPairs > 0}
         exporting={exporting}
+        onSaveProject={handleSaveProject}
+        canSaveProject={hasImages}
+        onOpenProject={() => projectInputRef.current?.click()}
+      />
+      <input
+        ref={projectInputRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) handleOpenProjectFile(file)
+          e.target.value = ''
+        }}
       />
 
       {editing && editingMinutia && editingMinutia.coordA && editingMinutia.coordB && state.imageA && state.imageB && (
@@ -277,14 +340,13 @@ export default function App() {
 
       <div ref={captureRef} className="flex flex-col gap-4 bg-gray-50 p-2 md:flex-row dark:bg-gray-800/60">
         <ImagePanel
+          ref={panelARef}
           slot="A"
           title="Imagem Questionada"
           image={state.imageA}
           minutiae={state.minutiae}
-          markerSize={markerSize}
           showNumbers={showNumbers}
           arrowMode={arrowMode}
-          arrowThickness={arrowThickness}
           transform={transformA}
           onTransformChange={setTransformA}
           otherImage={state.imageB}
@@ -298,14 +360,13 @@ export default function App() {
           onEndEdit={handleEndEdit}
         />
         <ImagePanel
+          ref={panelBRef}
           slot="B"
           title="Imagem Padrão"
           image={state.imageB}
           minutiae={state.minutiae}
-          markerSize={markerSize}
           showNumbers={showNumbers}
           arrowMode={arrowMode}
-          arrowThickness={arrowThickness}
           transform={transformB}
           onTransformChange={setTransformB}
           otherImage={state.imageA}
@@ -322,41 +383,12 @@ export default function App() {
 
       <MinutiaeTable
         minutiae={state.minutiae}
-        onChangeColor={handleChangeColor}
+        onChangeId={handleChangeId}
         onDelete={handleDelete}
         onToggleNumber={handleToggleNumber}
       />
 
       <div className="flex flex-col gap-3 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:flex-row sm:items-center sm:flex-wrap">
-        <div className="flex items-center gap-3">
-          <label htmlFor="marker-size" className="font-medium text-gray-600 dark:text-gray-300">
-            Tamanho do ponto
-          </label>
-          <input
-            id="marker-size"
-            type="range"
-            min={MIN_MARKER_SIZE}
-            max={MAX_MARKER_SIZE}
-            value={markerSize}
-            onChange={(e) => setMarkerSize(Number(e.target.value))}
-            className="w-32"
-          />
-          <div className="flex items-center gap-0.5">
-            <input
-              type="number"
-              value={markerSize}
-              onChange={(e) => {
-                if (e.target.value === '') return
-                const v = Number(e.target.value)
-                if (Number.isNaN(v)) return
-                setMarkerSize(Math.min(MAX_MARKER_SIZE, Math.max(MIN_MARKER_SIZE, v)))
-              }}
-              className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-            />
-            <span className="text-gray-500 dark:text-gray-400">px</span>
-          </div>
-        </div>
-
         <button
           onClick={() => setShowNumbers((v) => !v)}
           className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
@@ -377,42 +409,11 @@ export default function App() {
               ? 'bg-blue-600 text-white ring-blue-600'
               : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
           }`}
-          title="Com o modo seta ligado, arrastar um ponto move só o número (com uma seta até o ponto real)"
+          title="Com o modo linha ligado, arrastar um ponto move só o número (com uma linha até o ponto real)"
         >
           <MoveUpRight size={14} />
-          Modo seta
+          Modo linha
         </button>
-
-        <div className="flex items-center gap-3">
-          <label htmlFor="arrow-thickness" className="font-medium text-gray-600 dark:text-gray-300">
-            Grossura da seta
-          </label>
-          <input
-            id="arrow-thickness"
-            type="range"
-            min={MIN_ARROW_THICKNESS}
-            max={MAX_ARROW_THICKNESS}
-            step={0.5}
-            value={arrowThickness}
-            onChange={(e) => setArrowThickness(Number(e.target.value))}
-            className="w-32"
-          />
-          <div className="flex items-center gap-0.5">
-            <input
-              type="number"
-              step={0.5}
-              value={arrowThickness}
-              onChange={(e) => {
-                if (e.target.value === '') return
-                const v = Number(e.target.value)
-                if (Number.isNaN(v)) return
-                setArrowThickness(Math.min(MAX_ARROW_THICKNESS, Math.max(MIN_ARROW_THICKNESS, v)))
-              }}
-              className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-            />
-            <span className="text-gray-500 dark:text-gray-400">px</span>
-          </div>
-        </div>
       </div>
     </div>
   )

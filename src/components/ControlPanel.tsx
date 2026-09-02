@@ -1,4 +1,4 @@
-import { Download, Undo2 } from 'lucide-react'
+import { Download, FolderOpen, Save, Undo2 } from 'lucide-react'
 import type { ComparisonStep } from '../types'
 
 interface ControlPanelProps {
@@ -10,6 +10,9 @@ interface ControlPanelProps {
   onExport: () => void
   canExport: boolean
   exporting: boolean
+  onSaveProject: () => void
+  canSaveProject: boolean
+  onOpenProject: () => void
 }
 
 export default function ControlPanel({
@@ -21,6 +24,9 @@ export default function ControlPanel({
   onExport,
   canExport,
   exporting,
+  onSaveProject,
+  canSaveProject,
+  onOpenProject,
 }: ControlPanelProps) {
   const feedback = !hasImages
     ? 'Carregue as duas imagens para iniciar a marcação'
@@ -45,6 +51,25 @@ export default function ControlPanel({
         >
           <Undo2 size={16} />
           Desfazer último ponto
+        </button>
+
+        <button
+          onClick={onOpenProject}
+          className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          title="Abrir um confronto salvo anteriormente para continuar ou corrigir"
+        >
+          <FolderOpen size={16} />
+          Abrir edição
+        </button>
+
+        <button
+          onClick={onSaveProject}
+          disabled={!canSaveProject}
+          className="flex items-center gap-1 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          title="Salvar um arquivo editável para corrigir este confronto depois"
+        >
+          <Save size={16} />
+          Salvar edição
         </button>
 
         <button

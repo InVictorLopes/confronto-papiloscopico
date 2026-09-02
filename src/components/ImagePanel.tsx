@@ -1,6 +1,8 @@
 import {
+  forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
   type ChangeEvent,
@@ -35,10 +37,8 @@ interface ImagePanelProps {
   title: string
   image: string | null
   minutiae: Minutia[]
-  markerSize: number
   showNumbers: boolean
   arrowMode: boolean
-  arrowThickness: number
   transform: ImageTransform
   onTransformChange: Dispatch<SetStateAction<ImageTransform>>
   otherImage: string | null
@@ -57,6 +57,15 @@ const MAX_ZOOM = 5
 const MIN_CONTRAST = 50
 const MAX_CONTRAST = 250
 
+// Marcação padronizada do laudo — tamanhos e cores fixos, não editáveis pelo usuário.
+const MARKER_SIZE = 40 // px — diâmetro da bolinha do número
+const LINE_THICKNESS = 5 // px — peso da linha entre o número e o ponto real
+const ANCHOR_DOT_SIZE = LINE_THICKNESS * 3 // "bolinha da minúcia" — acompanha a espessura da linha
+const NUMBER_COLOR = '#dc2626' // vermelho
+const DOT_COLOR = '#ffffff' // branco
+const ANCHOR_DOT_COLOR = '#dc2626'
+const FRAME_COLOR: Record<ImageSlot, string> = { A: '#dc2626', B: '#2563eb' }
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
@@ -72,15 +81,13 @@ function buildFilter(t: ImageTransform): string | undefined {
   return parts.length ? parts.join(' ') : undefined
 }
 
-export default function ImagePanel({
+const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePanel({
   slot,
   title,
   image,
   minutiae,
-  markerSize,
   showNumbers,
   arrowMode,
-  arrowThickness,
   transform,
   onTransformChange: setTransform,
   otherImage,
@@ -92,8 +99,9 @@ export default function ImagePanel({
   onMoveLabel,
   onStartEdit,
   onEndEdit,
-}: ImagePanelProps) {
+}: ImagePanelProps, frameRef) {
   const viewportRef = useRef<HTMLDivElement>(null)
+  useImperativeHandle(frameRef, () => viewportRef.current as HTMLDivElement)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const naturalSizeRef = useRef<{ w: number; h: number } | null>(null)
@@ -552,10 +560,10 @@ export default function ImagePanel({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative aspect-[4/5] w-full overflow-hidden rounded-lg border-2 bg-gray-100 select-none dark:bg-gray-900/60 ${
-          allowCreate && image && !adjustMode ? 'border-blue-500' : 'border-gray-300 dark:border-gray-700'
+        className={`relative aspect-square w-full overflow-hidden rounded-lg border-4 bg-gray-100 select-none dark:bg-gray-900/60 ${
+          allowCreate && image && !adjustMode ? 'ring-2 ring-offset-2 ring-amber-400 dark:ring-offset-gray-900' : ''
         }`}
-        style={{ cursor, touchAction: adjustMode ? 'none' : 'auto' }}
+        style={{ cursor, touchAction: adjustMode ? 'none' : 'auto', borderColor: FRAME_COLOR[slot] }}
       >
         {!image && (
           <button
@@ -595,26 +603,6 @@ export default function ImagePanel({
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
             >
-              <defs>
-                {minutiae.map((m) => {
-                  const offset = m[offsetKey]
-                  if (offset.x === 0 && offset.y === 0) return null
-                  return (
-                    <marker
-                      key={m.id}
-                      id={`arrow-${slot}-${m.id}`}
-                      viewBox="0 0 10 10"
-                      refX="8"
-                      refY="5"
-                      markerWidth="5"
-                      markerHeight="5"
-                      orient="auto-start-reverse"
-                    >
-                      <path d="M0,0 L10,5 L0,10 z" fill={m.color} />
-                    </marker>
-                  )
-                })}
-              </defs>
               {minutiae.map((m) => {
                 const coord = m[coordKey]
                 const offset = m[offsetKey]
@@ -626,10 +614,9 @@ export default function ImagePanel({
                     y1={coord.y}
                     x2={coord.x + offset.x}
                     y2={coord.y + offset.y}
-                    stroke={m.color}
-                    strokeWidth={arrowThickness}
+                    stroke={NUMBER_COLOR}
+                    strokeWidth={LINE_THICKNESS}
                     vectorEffect="non-scaling-stroke"
-                    markerEnd={`url(#arrow-${slot}-${m.id})`}
                   />
                 )
               })}
@@ -656,9 +643,9 @@ export default function ImagePanel({
                         <div
                           className="rounded-full border border-white shadow"
                           style={{
-                            width: Math.max(6, markerSize * 0.4),
-                            height: Math.max(6, markerSize * 0.4),
-                            backgroundColor: m.color,
+                            width: ANCHOR_DOT_SIZE,
+                            height: ANCHOR_DOT_SIZE,
+                            backgroundColor: ANCHOR_DOT_COLOR,
                           }}
                         />
                       </div>
@@ -680,12 +667,16 @@ export default function ImagePanel({
                   >
                     <div style={{ transform: counterTransform }}>
                       <div
-                        className="flex items-center justify-center rounded-full border-2 border-white font-bold text-white shadow"
+                        className="flex items-center justify-center rounded-full shadow"
                         style={{
-                          width: markerSize,
-                          height: markerSize,
-                          backgroundColor: m.color,
-                          fontSize: Math.max(8, markerSize * 0.42),
+                          width: MARKER_SIZE,
+                          height: MARKER_SIZE,
+                          backgroundColor: DOT_COLOR,
+                          border: `2px solid ${NUMBER_COLOR}`,
+                          color: NUMBER_COLOR,
+                          fontFamily: 'Arial, Helvetica, sans-serif',
+                          fontWeight: 700,
+                          fontSize: MARKER_SIZE * 0.55,
                         }}
                         title={`Ponto ${m.id}`}
                       >
@@ -725,4 +716,6 @@ export default function ImagePanel({
       </div>
     </div>
   )
-}
+})
+
+export default ImagePanel
