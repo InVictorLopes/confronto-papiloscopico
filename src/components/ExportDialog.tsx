@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, X } from 'lucide-react'
 
 interface ExportDialogProps {
+  title?: string
+  extension?: string
+  confirmLabel?: string
   defaultName: string
   gapStart: number
   gapEnd: number
@@ -10,6 +13,9 @@ interface ExportDialogProps {
 }
 
 export default function ExportDialog({
+  title = 'Exportar confronto',
+  extension = '.jpg',
+  confirmLabel = 'Exportar',
   defaultName,
   gapStart,
   gapEnd,
@@ -42,7 +48,7 @@ export default function ExportDialog({
       >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">
-            Exportar confronto
+            {title}
           </h2>
           <button
             onClick={onCancel}
@@ -67,7 +73,7 @@ export default function ExportDialog({
             }}
             className="min-w-0 flex-1 bg-transparent text-sm text-gray-800 outline-none dark:text-gray-100"
           />
-          <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">.jpg</span>
+          <span className="shrink-0 text-sm text-gray-400 dark:text-gray-500">{extension}</span>
         </div>
 
         <div className="mt-4 flex justify-end gap-2">
@@ -83,7 +89,7 @@ export default function ExportDialog({
             className="flex items-center gap-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <Download size={16} />
-            Exportar
+            {confirmLabel}
           </button>
         </div>
       </div>

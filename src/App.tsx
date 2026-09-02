@@ -65,6 +65,7 @@ export default function App() {
   const [state, setState] = useState<AppState>(initialState)
   const [exporting, setExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showNumbers, setShowNumbers] = useState(true)
   const [arrowMode, setArrowMode] = useState(false)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
@@ -157,6 +158,18 @@ export default function App() {
     return true
   }
 
+  function handleReorder(id: number, direction: 'up' | 'down') {
+    setState((prev) => {
+      const idx = prev.minutiae.findIndex((m) => m.id === id)
+      if (idx === -1) return prev
+      const swapWith = direction === 'up' ? idx - 1 : idx + 1
+      if (swapWith < 0 || swapWith >= prev.minutiae.length) return prev
+      const next = [...prev.minutiae]
+      ;[next[idx], next[swapWith]] = [next[swapWith], next[idx]]
+      return { ...prev, minutiae: next }
+    })
+  }
+
   function handleDelete(id: number) {
     setState((prev) => {
       const target = prev.minutiae.find((m) => m.id === id)
@@ -212,14 +225,14 @@ export default function App() {
     }
   }
 
-  function handleSaveProject() {
+  function performSaveProject(filename: string) {
+    setShowSaveDialog(false)
     const project: ProjectFile = { version: 1, state, transformA, transformB }
     const blob = new Blob([JSON.stringify(project)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
-    const { name } = buildDefaultExportName()
     const link = document.createElement('a')
     link.href = url
-    link.download = `${sanitizeFilename(name)}_edicao.json`
+    link.download = `${sanitizeFilename(filename)}.json`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -285,7 +298,7 @@ export default function App() {
         onExport={() => setShowExportDialog(true)}
         canExport={hasImages && completedPairs > 0}
         exporting={exporting}
-        onSaveProject={handleSaveProject}
+        onSaveProject={() => setShowSaveDialog(true)}
         canSaveProject={hasImages}
         onOpenProject={() => projectInputRef.current?.click()}
       />
@@ -338,6 +351,19 @@ export default function App() {
         />
       )}
 
+      {showSaveDialog && (
+        <ExportDialog
+          title="Salvar edição"
+          extension=".json"
+          confirmLabel="Salvar"
+          defaultName={`${defaultExportName.name}_edicao`}
+          gapStart={defaultExportName.gap}
+          gapEnd={defaultExportName.gap}
+          onConfirm={performSaveProject}
+          onCancel={() => setShowSaveDialog(false)}
+        />
+      )}
+
       <div ref={captureRef} className="flex flex-col gap-4 bg-gray-50 p-2 md:flex-row dark:bg-gray-800/60">
         <ImagePanel
           ref={panelARef}
@@ -384,6 +410,7 @@ export default function App() {
       <MinutiaeTable
         minutiae={state.minutiae}
         onChangeId={handleChangeId}
+        onReorder={handleReorder}
         onDelete={handleDelete}
         onToggleNumber={handleToggleNumber}
       />

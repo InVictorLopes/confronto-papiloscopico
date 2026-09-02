@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { Eye, EyeOff, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, Trash2 } from 'lucide-react'
 import type { Minutia } from '../types'
 
 interface MinutiaeTableProps {
   minutiae: Minutia[]
   onChangeId: (oldId: number, newId: number) => boolean
+  onReorder: (id: number, direction: 'up' | 'down') => void
   onDelete: (id: number) => void
   onToggleNumber: (id: number) => void
 }
@@ -58,6 +59,7 @@ function IdCell({ id, onChangeId }: { id: number; onChangeId: (oldId: number, ne
 export default function MinutiaeTable({
   minutiae,
   onChangeId,
+  onReorder,
   onDelete,
   onToggleNumber,
 }: MinutiaeTableProps) {
@@ -80,7 +82,7 @@ export default function MinutiaeTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-          {minutiae.map((m) => {
+          {minutiae.map((m, index) => {
             const pending = m.coordB === null
             return (
               <tr key={m.id} className={pending ? 'bg-amber-50 dark:bg-amber-900/20' : undefined}>
@@ -96,6 +98,24 @@ export default function MinutiaeTable({
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-1">
+                    <div className="flex flex-col">
+                      <button
+                        onClick={() => onReorder(m.id, 'up')}
+                        disabled={index === 0}
+                        className="rounded p-0.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-700"
+                        title="Mover para cima na lista"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        onClick={() => onReorder(m.id, 'down')}
+                        disabled={index === minutiae.length - 1}
+                        className="rounded p-0.5 text-gray-500 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-400 dark:hover:bg-gray-700"
+                        title="Mover para baixo na lista"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                    </div>
                     <button
                       onClick={() => onToggleNumber(m.id)}
                       className="flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"

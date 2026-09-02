@@ -58,9 +58,9 @@ const MIN_CONTRAST = 50
 const MAX_CONTRAST = 250
 
 // Marcação padronizada do laudo — tamanhos e cores fixos, não editáveis pelo usuário.
-const MARKER_SIZE = 40 // px — diâmetro da bolinha do número
-const LINE_THICKNESS = 5 // px — peso da linha entre o número e o ponto real
-const ANCHOR_DOT_SIZE = LINE_THICKNESS * 3 // "bolinha da minúcia" — acompanha a espessura da linha
+const MARKER_SIZE = 24 // px — diâmetro da bolinha do número
+const LINE_THICKNESS = 3 // px — peso da linha entre o número e o ponto real
+const ANCHOR_DOT_SIZE = LINE_THICKNESS * 3 // "bolinha da minúcia" — acompanha a espessura da linha, só um pouco maior
 const NUMBER_COLOR = '#dc2626' // vermelho
 const DOT_COLOR = '#ffffff' // branco
 const ANCHOR_DOT_COLOR = '#dc2626'
