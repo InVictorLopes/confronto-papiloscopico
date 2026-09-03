@@ -509,7 +509,7 @@
       </dl>
       <dl>
         <dt>Formato de saída</dt>
-        <dd>.jpg</dd>
+        <dd>.jpg (e .json na edição)</dd>
       </dl>
     </div>
   </div>
@@ -524,8 +524,9 @@
       <a href="#lupas"><span class="num">06</span>Lupas de precisão</a>
       <a href="#aparencia"><span class="num">07</span>Aparência dos pontos</a>
       <a href="#exportar"><span class="num">08</span>Exportar</a>
-      <a href="#tema"><span class="num">09</span>Tema e privacidade</a>
-      <a href="#referencia"><span class="num">10</span>Referência rápida</a>
+      <a href="#edicao"><span class="num">09</span>Salvar e reabrir</a>
+      <a href="#tema"><span class="num">10</span>Tema e privacidade</a>
+      <a href="#referencia"><span class="num">11</span>Referência rápida</a>
     </nav>
 
     <main>
@@ -539,14 +540,18 @@
           <li><span>Clique num ponto característico na Imagem A. Ele fica pendente, esperando o correspondente.</span></li>
           <li><span>Clique no mesmo ponto na Imagem B. O par fica completo e o contador avança.</span></li>
           <li><span>Arraste qualquer ponto (nas duas imagens) sempre que precisar corrigir a posição.</span></li>
-          <li><span>Clique em <span class="chip">Exportar Confronto</span>, dê um nome ao arquivo e pronto — um <code>.jpg</code> com as duas imagens e todos os pontos marcados.</span></li>
+          <li><span>Clique em <span class="chip">Exportar Confronto</span>, escolha quais arquivos quer (já vêm todos marcados) e dê um identificador ao caso — pronto, os <code>.jpg</code>/<code>.json</code> escolhidos são baixados.</span></li>
         </ol>
       </section>
 
       <section id="carregar">
         <div class="sec-head"><span class="sec-num">02</span><h2>Carregar as imagens</h2></div>
-        <p class="lead">As duas imagens sempre aparecem no mesmo tamanho de quadro, não importa a resolução ou proporção do arquivo original.</p>
+        <p class="lead">As duas imagens sempre aparecem no mesmo quadro <strong>quadrado</strong>, não importa a resolução ou proporção do arquivo original — a Questionada dentro de uma caixinha vermelha, a Padrão dentro de uma azul.</p>
         <p>Clique em qualquer um dos dois quadros (ou no botão <span class="chip">Carregar imagem</span> / <span class="chip">Trocar imagem</span> no canto de cada painel) para escolher um arquivo do seu computador. Antes de carregar, o quadro mostra um ícone de impressão digital como espaço reservado.</p>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div><strong>Trocar imagem</strong> apaga todos os pontos marcados nesse confronto — as posições antigas não fazem mais sentido numa foto diferente. A marcação recomeça do zero.</div>
+        </div>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
           <div>As imagens nunca saem do seu navegador — não há upload para nenhum servidor.</div>
@@ -576,10 +581,16 @@
         </div>
 
         <h3>Corrigindo um ponto</h3>
-        <p>Clique e arraste o marcador diretamente sobre a imagem — em qualquer um dos dois lados, a qualquer momento, mesmo depois do par estar completo. Não precisa apagar e marcar de novo.</p>
+        <p>Clique e arraste o marcador diretamente sobre a imagem — em qualquer um dos dois lados, a qualquer momento, mesmo depois do par estar completo. Não precisa apagar e marcar de novo. O marcador nunca sai do quadro: se você arrastar até a borda, ele para exatamente ali.</p>
 
         <h3>Desfazer e excluir</h3>
-        <p><span class="chip">Desfazer último ponto</span> remove o ponto mais recente (mesmo que ainda esteja pendente, aguardando o lado B). Para remover um ponto específico da lista, use o botão de lixeira na linha correspondente da tabela, abaixo das imagens.</p>
+        <p><span class="chip">Desfazer último ponto</span> remove o ponto mais recente (mesmo que ainda esteja pendente, aguardando o lado B). Para remover um ponto específico da lista, use o botão de lixeira na linha correspondente da tabela, abaixo das imagens. Ao excluir, o próximo ponto marcado reaproveita esse número — a numeração nunca fica com buracos.</p>
+
+        <h3>Renumerar um ponto</h3>
+        <p>O número de cada linha da tabela é um campo editável: clique nele e digite outro número. Se o número já estiver em uso por outro ponto, a edição é recusada e o campo volta ao valor original.</p>
+
+        <h3>Reordenar a lista</h3>
+        <p>As setinhas <span class="chip">▲</span> / <span class="chip">▼</span> ao lado de cada linha movem aquele ponto para cima ou para baixo na tabela — útil para reagrupar visualmente depois de excluir e remarcar um ponto no meio da lista.</p>
       </section>
 
       <section id="ajustar">
@@ -589,28 +600,36 @@
         <div class="grid-cards">
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M9 11h4"/></svg>Zoom</h4>
-            <p>Botões, controle deslizante ou o campo numérico — de 50% a 500%.</p>
+            <p>Botões de − / + ou o campo numérico — de 50% a 500%.</p>
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Rotação</h4>
-            <p>Giro livre de −180° a 180°, ou 90° de cada vez com os botões das pontas.</p>
+            <p>Controle deslizante de −180° a 180°, ou 90° de cada vez com os botões das pontas. O botão <span class="chip">Girar na foto</span> liga um modo em que arrastar dentro da própria imagem gira ela livremente, com a mão no leme em vez do controle deslizante.</p>
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M8 3v18M16 3v18"/><path d="M3 8l3-3-3-3M21 8l-3-3 3-3" transform="translate(0,3)"/></svg>Espelhar</h4>
             <p>Inverte horizontalmente — para digitais capturadas em espelho (câmera frontal).</p>
           </div>
           <div class="card">
-            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg>Inverter cor</h4>
-            <p>Alterna para negativo — útil em digitais escaneadas com fundo escuro.</p>
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/></svg>Negativo</h4>
+            <p>Inverte as cores — útil em digitais escaneadas com fundo escuro.</p>
           </div>
           <div class="card">
-            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Contraste</h4>
-            <p>De 50% a 250% — aumente para deixar as cristas (o preto) mais escuras e definidas, sem clarear nem escurecer a imagem inteira.</p>
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Ponto preto</h4>
+            <p>Escurece as sombras e aumenta o contraste ao redor delas, sem mexer nos claros — o ajuste certo quando só a tinta está fraca.</p>
+          </div>
+          <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18M5 12h14"/></svg>Escurecer</h4>
+            <p>Deixa a foto inteira mais escura por igual (sombras e claros juntos) — o ajuste certo quando a imagem inteira está apagada ou clara demais.</p>
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>Redefinir</h4>
-            <p>Volta zoom, rotação, espelhamento e contraste desse lado ao estado original.</p>
+            <p>Volta zoom, rotação, espelhamento e níveis desse lado ao estado original.</p>
           </div>
+        </div>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div><strong>Ponto preto</strong> e <strong>Escurecer</strong> substituíram o antigo controle de "Contraste": o contraste puro sempre estica os tons em torno do cinza-médio, e por isso podia estourar pra branco (sumindo linhas) em imagens já claras/apagadas. Os dois novos controles resolvem isso com um ponto de referência ajustável.</div>
         </div>
 
         <p style="margin-top:1.1rem">Todo controle numérico tem um campinho ao lado do slider — dá pra arrastar <em>ou</em> digitar o valor exato.</p>
@@ -624,41 +643,58 @@
 
       <section id="lupas">
         <div class="sec-head"><span class="sec-num">06</span><h2>Lupas de precisão</h2></div>
-        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem no topo da tela.</p>
+        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem logo abaixo dos dois quadros de imagem.</p>
         <p>A da esquerda mostra sempre a <strong>Imagem&nbsp;A</strong>, a da direita sempre a <strong>Imagem&nbsp;B</strong> — a que está sendo editada fica com borda azul (“Editando”), a outra com borda âmbar (“Referência”), para comparar a cristalização da minúcia enquanto você posiciona. As duas respeitam a rotação, o espelhamento e a inversão de cor já aplicados naquele lado. Soltam sozinhas assim que você solta o ponto.</p>
       </section>
 
       <section id="aparencia">
         <div class="sec-head"><span class="sec-num">07</span><h2>Aparência dos pontos</h2></div>
-        <p class="lead">Controles na tabela de pontos e na barra logo abaixo dela, valendo para as duas imagens ao mesmo tempo.</p>
+        <p class="lead">A marcação segue um padrão fixo, igual em todo confronto — pensado pra ficar consistente entre laudos, então não dá pra mudar cor, tamanho ou espessura.</p>
 
-        <h3>Cor de cada par</h3>
-        <p>Na tabela, cada linha tem dois atalhos — <span class="swatch" style="background:#dc2626"></span><span class="chip">Vermelho</span> e <span class="swatch" style="background:#2563eb"></span><span class="chip">Azul</span> — além de um seletor de cor livre para qualquer tom.</p>
+        <h3>Bolinha branca, número vermelho</h3>
+        <p>Todo ponto é uma bolinha branca com borda e número vermelhos. Quando o número está deslocado (veja <strong>Modo linha</strong> abaixo), o ponto real na imagem fica marcado com uma bolinha vermelha menor, do tamanho da linha que o liga ao número.</p>
 
         <h3>Ocultar números</h3>
         <p>O botão de olho em cada linha da tabela esconde o número <em>daquele</em> ponto; o botão <span class="chip">Mostrar números</span>, na barra debaixo da tabela, esconde ou mostra o número de <em>todos</em> de uma vez.</p>
 
-        <h3>Modo seta</h3>
-        <p>Ligue <span class="chip">Modo seta</span> antes de arrastar um ponto para mover só o <em>número</em>, deixando o ponto real fixo onde foi marcado — útil quando dois pontos ficam muito próximos e os números se sobrepõem. Uma seta liga o número à posição real. Desligado (padrão), arrastar move o ponto normalmente.</p>
-
-        <h3>Tamanho e grossura</h3>
-        <p>Os sliders <span class="chip">Tamanho do ponto</span> e <span class="chip">Grossura da seta</span> — cada um com campo numérico ao lado — ajustam a aparência de todos os marcadores, incluindo na exportação final.</p>
+        <h3>Modo linha</h3>
+        <p>Ligue <span class="chip">Modo linha</span> antes de arrastar um ponto para mover só o <em>número</em>, deixando o ponto real fixo onde foi marcado — útil quando dois pontos ficam muito próximos e os números se sobrepõem. Uma linha reta liga o número à posição real (sem cabeça de seta). Desligado (padrão), arrastar move o ponto normalmente. Em qualquer um dos dois modos, a bolinha nunca sai do quadro.</p>
       </section>
 
       <section id="exportar">
         <div class="sec-head"><span class="sec-num">08</span><h2>Exportar o confronto</h2></div>
         <p class="lead">O botão <span class="chip">Exportar Confronto</span> fica sempre visível, mas só libera quando existe ao menos um par completo.</p>
-        <p>Ao clicar, abre uma caixa para nomear o arquivo, já sugerindo <span class="chip">confronto_papiloscopico__DD_MM_AAAA</span> com a data de hoje — o cursor entra exatamente no espaço entre os dois underscores, pronto para você digitar um número de caso, por exemplo. Confirme com <span class="chip">Exportar</span> ou <kbd>Enter</kbd>; o resultado é um <code>.jpg</code> com as duas imagens lado a lado e todos os pontos marcados, incluindo cores, números e setas.</p>
+        <p>Ao clicar, abre uma caixa com quatro opções, todas marcadas por padrão — desmarque as que não quiser:</p>
+        <div class="grid-cards">
+          <div class="card"><h4>Imagem Questionada</h4><p>Só o quadro A, sozinho, já recortado.</p></div>
+          <div class="card"><h4>Imagem Padrão</h4><p>Só o quadro B, sozinho, já recortado.</p></div>
+          <div class="card"><h4>O conjunto</h4><p>As duas imagens lado a lado, com todos os pontos marcados.</p></div>
+          <div class="card"><h4>A edição</h4><p>O arquivo <code>.json</code> editável — veja a seção seguinte.</p></div>
+        </div>
+        <p style="margin-top:1.1rem">Um campo de <strong>identificador do caso</strong> mostra o modelo <span class="chip">confronto_papiloscopico_CAD_(campo editável)_DD_MM_AAAA</span> — só a parte entre parênteses é digitável; o resto (prefixo e data) é fixo e se repete, com o prefixo certo, em cada um dos quatro arquivos. Digite o identificador uma vez e ele se aplica a todos.</p>
+        <p>Se precisar de um nome totalmente diferente para um arquivo específico, clique no ícone de lápis ao lado dele — abre um campo com o nome automático já preenchido, pronto para editar por completo. Um link <span class="chip">Restaurar</span> aparece para voltar a seguir o identificador do caso.</p>
+        <p>Confirme com <span class="chip">Exportar</span>; cada opção marcada vira um download imediato.</p>
+      </section>
+
+      <section id="edicao">
+        <div class="sec-head"><span class="sec-num">09</span><h2>Salvar e reabrir a edição</h2></div>
+        <p class="lead">Pensado para corrigir um confronto depois — por exemplo, após a revisão do laudo.</p>
+        <p><span class="chip">Salvar edição</span>, no topo da tela, gera um arquivo <code>.json</code> com as duas imagens, todos os pontos e todos os ajustes (zoom, rotação, níveis etc.) daquele confronto — pede um nome antes de baixar, do mesmo jeito que a exportação de imagens.</p>
+        <p><span class="chip">Abrir edição</span> carrega esse arquivo de volta, exatamente como estava: as imagens, os pontos e os ajustes voltam tudo ao lugar, prontos para corrigir e exportar de novo.</p>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div>O <code>.json</code> da edição não é o mesmo arquivo que o <code>.jpg</code> exportado — guarde-o à parte se quiser poder reabrir e corrigir esse confronto mais tarde.</div>
+        </div>
       </section>
 
       <section id="tema">
-        <div class="sec-head"><span class="sec-num">09</span><h2>Tema e privacidade</h2></div>
+        <div class="sec-head"><span class="sec-num">10</span><h2>Tema e privacidade</h2></div>
         <p class="lead">O ícone de sol/lua no canto superior direito alterna entre tema claro e escuro — a escolha fica salva no navegador.</p>
         <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
       </section>
 
       <section id="referencia">
-        <div class="sec-head"><span class="sec-num">10</span><h2>Referência rápida</h2></div>
+        <div class="sec-head"><span class="sec-num">11</span><h2>Referência rápida</h2></div>
         <p class="lead">Todos os controles, num só lugar.</p>
         <div class="ref-scroll">
           <table class="ref">
@@ -667,17 +703,23 @@
             </thead>
             <tbody>
               <tr><td class="chip">Carregar imagem</td><td>Painel A / B</td><td>Escolhe o arquivo de imagem local</td></tr>
-              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom, rotação, espelhar, inverter, contraste</td></tr>
+              <tr><td class="chip">Trocar imagem</td><td>Painel A / B</td><td>Troca a foto e apaga os pontos marcados</td></tr>
+              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom, rotação, espelhar, negativo, níveis</td></tr>
+              <tr><td class="chip">Girar na foto</td><td>Barra de ajuste</td><td>Arrastar dentro da imagem gira ela livremente</td></tr>
+              <tr><td class="chip">Ponto preto</td><td>Barra de ajuste</td><td>Escurece as sombras e aumenta o contraste</td></tr>
+              <tr><td class="chip">Escurecer</td><td>Barra de ajuste</td><td>Escurece a foto inteira, por igual</td></tr>
               <tr><td class="chip">Molde</td><td>Barra de ajuste</td><td>Sobrepõe a outra imagem, semitransparente</td></tr>
-              <tr><td class="chip">Redefinir</td><td>Barra de ajuste</td><td>Zera zoom, rotação, espelhamento e contraste</td></tr>
+              <tr><td class="chip">Redefinir</td><td>Barra de ajuste</td><td>Zera zoom, rotação, espelhamento e níveis</td></tr>
               <tr><td class="chip">Desfazer último ponto</td><td>Barra de status</td><td>Remove o ponto mais recente</td></tr>
-              <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de nome e gera o .jpg</td></tr>
+              <tr><td class="chip">Abrir edição</td><td>Barra de status</td><td>Recarrega um confronto salvo em .json</td></tr>
+              <tr><td class="chip">Salvar edição</td><td>Barra de status</td><td>Salva imagens, pontos e ajustes num .json editável</td></tr>
+              <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de seleção de arquivos e nomes</td></tr>
               <tr><td class="chip">Mostrar números</td><td>Barra inferior</td><td>Esconde/mostra o número de todos os pontos</td></tr>
-              <tr><td class="chip">Modo seta</td><td>Barra inferior</td><td>Arrastar passa a mover só o número, com seta até o ponto</td></tr>
-              <tr><td class="chip">Tamanho do ponto</td><td>Barra inferior</td><td>Diâmetro do marcador (12–40px)</td></tr>
-              <tr><td class="chip">Grossura da seta</td><td>Barra inferior</td><td>Espessura da linha do modo seta (0.5–5px)</td></tr>
+              <tr><td class="chip">Modo linha</td><td>Barra inferior</td><td>Arrastar passa a mover só o número, com linha até o ponto</td></tr>
+              <tr><td>Número editável</td><td>Tabela de pontos</td><td>Clique para renumerar aquele ponto</td></tr>
+              <tr><td>Setinhas ▲ / ▼</td><td>Tabela de pontos</td><td>Move aquele ponto para cima/baixo na lista</td></tr>
               <tr><td>Ícone de olho</td><td>Tabela de pontos</td><td>Oculta o número de um ponto específico</td></tr>
-              <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par</td></tr>
+              <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par (o número fica livre pro próximo)</td></tr>
               <tr><td>Sol / Lua</td><td>Cabeçalho</td><td>Alterna tema claro/escuro</td></tr>
             </tbody>
           </table>
