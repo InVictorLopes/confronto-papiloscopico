@@ -8,17 +8,22 @@ import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import Magnifier from './components/Magnifier'
 import ExportDialog from './components/ExportDialog'
+import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
 import { useTheme } from './useTheme'
 
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
 
-function buildDefaultExportName() {
+function buildDateSuffix() {
   const d = new Date()
   const dd = String(d.getDate()).padStart(2, '0')
   const mm = String(d.getMonth() + 1).padStart(2, '0')
   const yyyy = d.getFullYear()
+  return `${dd}_${mm}_${yyyy}`
+}
+
+function buildDefaultExportName() {
   const prefix = 'confronto_papiloscopico_'
-  const suffix = `_${dd}_${mm}_${yyyy}`
+  const suffix = `_${buildDateSuffix()}`
   return { name: prefix + suffix, gap: prefix.length }
 }
 
@@ -81,6 +86,10 @@ export default function App() {
     setState((prev) => ({
       ...prev,
       [slot === 'A' ? 'imageA' : 'imageB']: dataUrl,
+      // Trocar a imagem invalida as marcações antigas (as posições eram relativas
+      // à imagem anterior), então os pontos somem e a marcação recomeça do zero.
+      minutiae: [],
+      currentStep: 'WAITING_A',
     }))
     if (slot === 'A') setTransformA(DEFAULT_IMAGE_TRANSFORM)
     else setTransformB(DEFAULT_IMAGE_TRANSFORM)
@@ -198,27 +207,40 @@ export default function App() {
     link.click()
   }
 
-  async function performExport(filename: string) {
+  function downloadProjectFile(filename: string) {
+    const project: ProjectFile = { version: 1, state, transformA, transformB }
+    const blob = new Blob([JSON.stringify(project)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function performExport(selections: ExportSelection[]) {
     setShowExportDialog(false)
-    if (!captureRef.current) return
     setExporting(true)
     try {
-      const safeName = sanitizeFilename(filename)
-      const combined = await html2canvas(captureRef.current, {
-        backgroundColor: '#ffffff',
-        useCORS: true,
-        scale: 2,
-        windowWidth: 1400,
-      })
-      downloadCanvas(combined, `${safeName}.jpg`)
-
-      if (panelARef.current) {
-        const canvasA = await html2canvas(panelARef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
-        downloadCanvas(canvasA, `${safeName}_questionada.jpg`)
-      }
-      if (panelBRef.current) {
-        const canvasB = await html2canvas(panelBRef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
-        downloadCanvas(canvasB, `${safeName}_padrao.jpg`)
+      for (const { kind, filename } of selections) {
+        const safeName = sanitizeFilename(filename)
+        if (kind === 'conjunto' && captureRef.current) {
+          const combined = await html2canvas(captureRef.current, {
+            backgroundColor: '#ffffff',
+            useCORS: true,
+            scale: 2,
+            windowWidth: 1400,
+          })
+          downloadCanvas(combined, `${safeName}.jpg`)
+        } else if (kind === 'questionada' && panelARef.current) {
+          const canvasA = await html2canvas(panelARef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+          downloadCanvas(canvasA, `${safeName}.jpg`)
+        } else if (kind === 'padrao' && panelBRef.current) {
+          const canvasB = await html2canvas(panelBRef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+          downloadCanvas(canvasB, `${safeName}.jpg`)
+        } else if (kind === 'edicao') {
+          downloadProjectFile(`${safeName}.json`)
+        }
       }
     } finally {
       setExporting(false)
@@ -227,14 +249,7 @@ export default function App() {
 
   function performSaveProject(filename: string) {
     setShowSaveDialog(false)
-    const project: ProjectFile = { version: 1, state, transformA, transformB }
-    const blob = new Blob([JSON.stringify(project)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `${sanitizeFilename(filename)}.json`
-    link.click()
-    URL.revokeObjectURL(url)
+    downloadProjectFile(`${sanitizeFilename(filename)}.json`)
   }
 
   async function handleOpenProjectFile(file: File) {
@@ -314,38 +329,9 @@ export default function App() {
         }}
       />
 
-      {editing && editingMinutia && editingMinutia.coordA && editingMinutia.coordB && state.imageA && state.imageB && (
-        <div className="fixed inset-x-0 top-4 z-50 flex justify-center">
-          <div className="flex items-center gap-6 rounded-xl bg-white/95 p-4 shadow-2xl ring-1 ring-gray-200 backdrop-blur dark:bg-gray-800/95 dark:ring-gray-700">
-            <Magnifier
-              image={state.imageA}
-              point={editingMinutia.coordA}
-              label={editing.slot === 'A' ? 'Editando · Imagem A' : 'Referência · Imagem A'}
-              variant={editing.slot === 'A' ? 'editing' : 'reference'}
-              rotation={transformA.rotation}
-              flipped={transformA.flipped}
-              inverted={transformA.inverted}
-              contrast={transformA.contrast}
-            />
-            <Magnifier
-              image={state.imageB}
-              point={editingMinutia.coordB}
-              label={editing.slot === 'B' ? 'Editando · Imagem B' : 'Referência · Imagem B'}
-              variant={editing.slot === 'B' ? 'editing' : 'reference'}
-              rotation={transformB.rotation}
-              flipped={transformB.flipped}
-              inverted={transformB.inverted}
-              contrast={transformB.contrast}
-            />
-          </div>
-        </div>
-      )}
-
       {showExportDialog && (
-        <ExportDialog
-          defaultName={defaultExportName.name}
-          gapStart={defaultExportName.gap}
-          gapEnd={defaultExportName.gap}
+        <MultiExportDialog
+          dateSuffix={buildDateSuffix()}
           onConfirm={performExport}
           onCancel={() => setShowExportDialog(false)}
         />
@@ -406,6 +392,35 @@ export default function App() {
           onEndEdit={handleEndEdit}
         />
       </div>
+
+      {editing && editingMinutia && editingMinutia.coordA && editingMinutia.coordB && state.imageA && state.imageB && (
+        <div className="flex justify-center">
+          <div className="flex items-center gap-6 rounded-xl bg-white/95 p-4 shadow-2xl ring-1 ring-gray-200 backdrop-blur dark:bg-gray-800/95 dark:ring-gray-700">
+            <Magnifier
+              image={state.imageA}
+              point={editingMinutia.coordA}
+              label={editing.slot === 'A' ? 'Editando · Imagem A' : 'Referência · Imagem A'}
+              variant={editing.slot === 'A' ? 'editing' : 'reference'}
+              rotation={transformA.rotation}
+              flipped={transformA.flipped}
+              inverted={transformA.inverted}
+              levelsBlack={transformA.levelsBlack}
+              darken={transformA.darken}
+            />
+            <Magnifier
+              image={state.imageB}
+              point={editingMinutia.coordB}
+              label={editing.slot === 'B' ? 'Editando · Imagem B' : 'Referência · Imagem B'}
+              variant={editing.slot === 'B' ? 'editing' : 'reference'}
+              rotation={transformB.rotation}
+              flipped={transformB.flipped}
+              inverted={transformB.inverted}
+              levelsBlack={transformB.levelsBlack}
+              darken={transformB.darken}
+            />
+          </div>
+        </div>
+      )}
 
       <MinutiaeTable
         minutiae={state.minutiae}

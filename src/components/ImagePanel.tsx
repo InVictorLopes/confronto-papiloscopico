@@ -19,7 +19,10 @@ import {
   EyeOff,
   Fingerprint,
   FlipHorizontal2,
+  Hand,
+  Minus,
   Move,
+  Plus,
   RefreshCw,
   RotateCcw,
   RotateCw,
@@ -31,6 +34,7 @@ import {
 } from 'lucide-react'
 import type { Coordinate, ImageSlot, ImageTransform, Minutia } from '../types'
 import { DEFAULT_IMAGE_TRANSFORM } from '../types'
+import { buildLevelsFilterParts } from '../levels'
 
 interface ImagePanelProps {
   slot: ImageSlot
@@ -54,8 +58,13 @@ interface ImagePanelProps {
 
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 5
-const MIN_CONTRAST = 50
-const MAX_CONTRAST = 250
+const MIN_LEVEL = 0
+const MAX_LEVEL = 254
+const LEVEL_STEP = 15
+
+// Botão de -/+ compartilhado por zoom, rotação, ponto preto e escurecer.
+const STEP_BTN_CLASS =
+  'rounded-full bg-gray-100 p-1 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
 
 // Marcação padronizada do laudo — tamanhos e cores fixos, não editáveis pelo usuário.
 const MARKER_SIZE = 24 // px — diâmetro da bolinha do número
@@ -77,7 +86,7 @@ function wrapAngle(deg: number) {
 function buildFilter(t: ImageTransform): string | undefined {
   const parts: string[] = []
   if (t.inverted) parts.push('invert(1)')
-  if (t.contrast !== 100) parts.push(`contrast(${t.contrast}%)`)
+  parts.push(...buildLevelsFilterParts(t.levelsBlack, t.darken))
   return parts.length ? parts.join(' ') : undefined
 }
 
@@ -105,15 +114,18 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const naturalSizeRef = useRef<{ w: number; h: number } | null>(null)
-  const dragRef = useRef<{ startX: number; startY: number; startPanXpx: number; startPanYpx: number } | null>(
-    null,
-  )
+  const dragRef = useRef<
+    | { mode: 'pan'; startX: number; startY: number; startPanXpx: number; startPanYpx: number }
+    | { mode: 'rotate'; startAngleDeg: number; startRotation: number }
+    | null
+  >(null)
   const draggingMinutiaId = useRef<number | null>(null)
 
   const [baseSize, setBaseSize] = useState({ width: 0, height: 0 })
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
   const [otherNatural, setOtherNatural] = useState<{ w: number; h: number } | null>(null)
   const [adjustMode, setAdjustMode] = useState(false)
+  const [rotateDragMode, setRotateDragMode] = useState(false)
   const [showGhost, setShowGhost] = useState(true)
   const [isDragging, setIsDragging] = useState(false)
 
@@ -133,6 +145,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   // (a transformação em si é redefinida pelo componente pai)
   useEffect(() => {
     setAdjustMode(false)
+    setRotateDragMode(false)
     setBaseSize({ width: 0, height: 0 })
     naturalSizeRef.current = null
   }, [image])
@@ -210,10 +223,12 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const otherPanXpx = (otherTransform.panX / 100) * ghostBaseSize.width
   const otherPanYpx = (otherTransform.panY / 100) * ghostBaseSize.height
 
-  const screenToPercent = useCallback(
-    (clientX: number, clientY: number, allowMargin = false): Coordinate | null => {
-      if (!viewportRef.current || baseSize.width === 0) return null
-      const viewportRect = viewportRef.current.getBoundingClientRect()
+  // Converte uma posição de tela para porcentagem da imagem, SEM travar nada —
+  // usado tanto para o ponto real quanto para descobrir onde ficam os cantos do
+  // quadro (viewport) em espaço de porcentagem, já considerando zoom/pan/rotação.
+  const toPercentUnclamped = useCallback(
+    (clientX: number, clientY: number): Coordinate => {
+      const viewportRect = viewportRef.current!.getBoundingClientRect()
       const stageLeft = (viewportRect.width - baseSize.width) / 2
       const stageTop = (viewportRect.height - baseSize.height) / 2
       const centerScreenX = viewportRect.left + stageLeft + baseSize.width / 2
@@ -235,33 +250,81 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       const localX = (afterRotX / transform.zoom) * flipFactor
       const localY = afterRotY / transform.zoom
 
-      const percentX = ((localX + baseSize.width / 2) / baseSize.width) * 100
-      const percentY = ((localY + baseSize.height / 2) / baseSize.height) * 100
-
-      // No modo seta, o número pode ir até a borda do quadro inteiro (viewport),
-      // não só até a borda da imagem — útil quando a foto não preenche o quadro todo.
-      let minX = 0
-      let maxX = 100
-      let minY = 0
-      let maxY = 100
-      if (allowMargin) {
-        const marginXPercent = ((viewportRect.width - baseSize.width) / 2 / baseSize.width) * 100
-        const marginYPercent = ((viewportRect.height - baseSize.height) / 2 / baseSize.height) * 100
-        minX = -marginXPercent
-        maxX = 100 + marginXPercent
-        minY = -marginYPercent
-        maxY = 100 + marginYPercent
+      return {
+        x: ((localX + baseSize.width / 2) / baseSize.width) * 100,
+        y: ((localY + baseSize.height / 2) / baseSize.height) * 100,
       }
-
-      return { x: clamp(percentX, minX, maxX), y: clamp(percentY, minY, maxY) }
     },
     [baseSize, panXpx, panYpx, transform.rotation, transform.zoom, transform.flipped],
+  )
+
+  const screenToPercent = useCallback(
+    (clientX: number, clientY: number): Coordinate | null => {
+      if (!viewportRef.current || baseSize.width === 0) return null
+      const viewportRect = viewportRef.current.getBoundingClientRect()
+
+      // O ponto (ou o número, no modo linha) nunca pode sair do quadro visível —
+      // então os limites são os 4 cantos do PRÓPRIO QUADRO convertidos pra
+      // porcentagem da imagem (não apenas 0-100%, que seria só a foto, ignorando
+      // zoom/pan/rotação, e permitia arrastar pra fora do quadro quando com zoom).
+      const corners = [
+        toPercentUnclamped(viewportRect.left, viewportRect.top),
+        toPercentUnclamped(viewportRect.right, viewportRect.top),
+        toPercentUnclamped(viewportRect.left, viewportRect.bottom),
+        toPercentUnclamped(viewportRect.right, viewportRect.bottom),
+      ]
+      let minX = Math.min(...corners.map((c) => c.x))
+      let maxX = Math.max(...corners.map((c) => c.x))
+      let minY = Math.min(...corners.map((c) => c.y))
+      let maxY = Math.max(...corners.map((c) => c.y))
+
+      // A bolinha do número tem um tamanho fixo NA TELA (não escala com o zoom),
+      // então o próprio raio dela precisa ficar de fora do quadro — senão metade
+      // dela ainda vaza pela borda mesmo com o centro travado exatamente na borda.
+      const radiusPx = MARKER_SIZE / 2
+      const insetXPercent = (radiusPx / (baseSize.width * transform.zoom)) * 100
+      const insetYPercent = (radiusPx / (baseSize.height * transform.zoom)) * 100
+      if (maxX - minX > insetXPercent * 2) {
+        minX += insetXPercent
+        maxX -= insetXPercent
+      } else {
+        const mid = (minX + maxX) / 2
+        minX = maxX = mid
+      }
+      if (maxY - minY > insetYPercent * 2) {
+        minY += insetYPercent
+        maxY -= insetYPercent
+      } else {
+        const mid = (minY + maxY) / 2
+        minY = maxY = mid
+      }
+
+      const { x: percentX, y: percentY } = toPercentUnclamped(clientX, clientY)
+      return { x: clamp(percentX, minX, maxX), y: clamp(percentY, minY, maxY) }
+    },
+    [baseSize, toPercentUnclamped, transform.zoom],
   )
 
   function handleMarkClick(e: MouseEvent<HTMLDivElement>) {
     if (adjustMode || !allowCreate || !image) return
     const coord = screenToPercent(e.clientX, e.clientY)
     if (coord) onCreatePoint(coord)
+  }
+
+  // Centro da imagem na tela (mesmo pivô usado pelo giro), considerando o pan atual.
+  function screenCenter() {
+    const viewportRect = viewportRef.current!.getBoundingClientRect()
+    const stageLeft = (viewportRect.width - baseSize.width) / 2
+    const stageTop = (viewportRect.height - baseSize.height) / 2
+    return {
+      x: viewportRect.left + stageLeft + baseSize.width / 2 + panXpx,
+      y: viewportRect.top + stageTop + baseSize.height / 2 + panYpx,
+    }
+  }
+
+  function angleFromCenterDeg(clientX: number, clientY: number) {
+    const center = screenCenter()
+    return (Math.atan2(clientY - center.y, clientX - center.x) * 180) / Math.PI
   }
 
   function handlePointerDown(e: PointerEvent<HTMLDivElement>) {
@@ -272,12 +335,26 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     } catch {
       // Pointer sintético/já liberado — o arraste ainda funciona via listeners no viewport.
     }
-    dragRef.current = { startX: e.clientX, startY: e.clientY, startPanXpx: panXpx, startPanYpx: panYpx }
+    if (rotateDragMode) {
+      dragRef.current = {
+        mode: 'rotate',
+        startAngleDeg: angleFromCenterDeg(e.clientX, e.clientY),
+        startRotation: transform.rotation,
+      }
+    } else {
+      dragRef.current = { mode: 'pan', startX: e.clientX, startY: e.clientY, startPanXpx: panXpx, startPanYpx: panYpx }
+    }
     setIsDragging(true)
   }
 
   function handlePointerMove(e: PointerEvent<HTMLDivElement>) {
     if (!dragRef.current || baseSize.width === 0) return
+    if (dragRef.current.mode === 'rotate') {
+      const { startAngleDeg, startRotation } = dragRef.current
+      const delta = angleFromCenterDeg(e.clientX, e.clientY) - startAngleDeg
+      setTransform((t) => ({ ...t, rotation: wrapAngle(startRotation + delta) }))
+      return
+    }
     const dx = e.clientX - dragRef.current.startX
     const dy = e.clientY - dragRef.current.startY
     const newPanXpx = dragRef.current.startPanXpx + dx
@@ -310,7 +387,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   function handleMarkerPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
-    const cursor = screenToPercent(e.clientX, e.clientY, arrowMode)
+    const cursor = screenToPercent(e.clientX, e.clientY)
     if (!cursor) return
     if (arrowMode) {
       const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
@@ -318,7 +395,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       if (!point) return
       onMoveLabel(draggingMinutiaId.current, { x: cursor.x - point.x, y: cursor.y - point.y })
     } else {
-      onMovePoint(draggingMinutiaId.current, cursor)
+      // O que o usuário está arrastando na tela é a bolinha (que fica em
+      // coord+offset quando o ponto já tem uma linha) — não o próprio coord.
+      // Por isso o offset entra na conta: a bolinha (já travada no quadro por
+      // `cursor`) é o que deve ficar em cima do mouse, não o coord sozinho.
+      const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
+      const offset = m?.[offsetKey] ?? { x: 0, y: 0 }
+      onMovePoint(draggingMinutiaId.current, { x: cursor.x - offset.x, y: cursor.y - offset.y })
     }
   }
 
@@ -378,176 +461,257 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       </div>
 
       {adjustMode && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom / 1.2, MIN_ZOOM, MAX_ZOOM) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Diminuir zoom"
-            >
-              <ZoomOut size={14} />
-            </button>
-            <div className="flex items-center gap-0.5">
-              <input
-                type="number"
-                value={Math.round(transform.zoom * 100)}
-                onChange={(e) => {
-                  if (e.target.value === '') return
-                  const v = Number(e.target.value)
-                  if (Number.isNaN(v)) return
-                  setTransform((t) => ({ ...t, zoom: clamp(v, MIN_ZOOM * 100, MAX_ZOOM * 100) / 100 }))
-                }}
-                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
-              />
-              <span className="text-gray-500 dark:text-gray-400">%</span>
+        <div className="flex flex-col gap-1.5 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700">
+          <div className="grid grid-cols-2 gap-1">
+            {/* Zoom */}
+            <div className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <span className="font-medium text-gray-500 dark:text-gray-400">Zoom</span>
+              <button
+                onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom / 1.2, MIN_ZOOM, MAX_ZOOM) }))}
+                className={STEP_BTN_CLASS}
+                title="Diminuir zoom"
+              >
+                <ZoomOut size={14} />
+              </button>
+              <div className="flex items-center gap-0.5">
+                <input
+                  type="number"
+                  value={Math.round(transform.zoom * 100)}
+                  onChange={(e) => {
+                    if (e.target.value === '') return
+                    const v = Number(e.target.value)
+                    if (Number.isNaN(v)) return
+                    setTransform((t) => ({ ...t, zoom: clamp(v, MIN_ZOOM * 100, MAX_ZOOM * 100) / 100 }))
+                  }}
+                  className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                />
+                <span className="text-gray-500 dark:text-gray-400">%</span>
+              </div>
+              <button
+                onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom * 1.2, MIN_ZOOM, MAX_ZOOM) }))}
+                className={STEP_BTN_CLASS}
+                title="Aumentar zoom"
+              >
+                <ZoomIn size={14} />
+              </button>
             </div>
-            <button
-              onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom * 1.2, MIN_ZOOM, MAX_ZOOM) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Aumentar zoom"
-            >
-              <ZoomIn size={14} />
-            </button>
-          </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation - 90) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Girar 90° à esquerda"
-            >
-              <RotateCcw size={14} />
-            </button>
-            <input
-              type="range"
-              min={-180}
-              max={180}
-              value={Math.round(transform.rotation)}
-              onChange={(e) =>
-                setTransform((t) => ({ ...t, rotation: Number(e.target.value) }))
-              }
-              className="w-20"
-            />
-            <button
-              onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation + 90) }))}
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Girar 90° à direita"
-            >
-              <RotateCw size={14} />
-            </button>
-            <div className="flex items-center gap-0.5">
+            {/* Rotação */}
+            <div className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <span className="font-medium text-gray-500 dark:text-gray-400">Rotação</span>
               <input
-                type="number"
+                type="range"
+                min={-180}
+                max={180}
                 value={Math.round(transform.rotation)}
-                onChange={(e) => {
-                  if (e.target.value === '') return
-                  const v = Number(e.target.value)
-                  if (Number.isNaN(v)) return
-                  setTransform((t) => ({ ...t, rotation: clamp(v, -180, 180) }))
-                }}
-                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                onChange={(e) =>
+                  setTransform((t) => ({ ...t, rotation: Number(e.target.value) }))
+                }
+                className="w-14"
               />
-              <span className="text-gray-500 dark:text-gray-400">°</span>
+              <button
+                onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation - 90) }))}
+                className={STEP_BTN_CLASS}
+                title="Girar 90° à esquerda"
+              >
+                <RotateCcw size={14} />
+              </button>
+              <div className="flex items-center gap-0.5">
+                <input
+                  type="number"
+                  value={Math.round(transform.rotation)}
+                  onChange={(e) => {
+                    if (e.target.value === '') return
+                    const v = Number(e.target.value)
+                    if (Number.isNaN(v)) return
+                    setTransform((t) => ({ ...t, rotation: clamp(v, -180, 180) }))
+                  }}
+                  className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                />
+                <span className="text-gray-500 dark:text-gray-400">°</span>
+              </div>
+              <button
+                onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation + 90) }))}
+                className={STEP_BTN_CLASS}
+                title="Girar 90° à direita"
+              >
+                <RotateCw size={14} />
+              </button>
+              <button
+                onClick={() => setRotateDragMode((v) => !v)}
+                className={`rounded-full p-1 ${
+                  rotateDragMode
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
+                title={
+                  rotateDragMode
+                    ? 'Girar na foto: ativado — arraste dentro da foto para girar livremente (o arraste não move mais a foto até desligar aqui)'
+                    : 'Girar na foto: ligar para poder girar arrastando dentro da própria foto, em vez de usar o controle deslizante'
+                }
+              >
+                <Hand size={14} />
+              </button>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setTransform((t) => ({ ...t, flipped: !t.flipped }))}
-              className={`rounded p-1 shadow-sm ring-1 ${
-                transform.flipped
-                  ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
-              }`}
-              title="Espelhar horizontalmente (frontal/traseira)"
+            {/* Ponto preto */}
+            <div
+              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              title="Ponto preto: escurece as sombras e aumenta o contraste ao redor delas, sem mexer nos claros"
             >
-              <FlipHorizontal2 size={14} />
-            </button>
-            <button
-              onClick={() => setTransform((t) => ({ ...t, inverted: !t.inverted }))}
-              className={`rounded p-1 shadow-sm ring-1 ${
-                transform.inverted
-                  ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
-              }`}
-              title="Inverter cores (negativo)"
-            >
-              <Contrast size={14} />
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() =>
-                setTransform((t) => ({
-                  ...t,
-                  contrast: clamp(t.contrast - 10, MIN_CONTRAST, MAX_CONTRAST),
-                }))
-              }
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Diminuir contraste"
-            >
-              <SunDim size={14} />
-            </button>
-            <input
-              type="range"
-              min={MIN_CONTRAST}
-              max={MAX_CONTRAST}
-              value={transform.contrast}
-              onChange={(e) => setTransform((t) => ({ ...t, contrast: Number(e.target.value) }))}
-              className="w-20"
-            />
-            <button
-              onClick={() =>
-                setTransform((t) => ({
-                  ...t,
-                  contrast: clamp(t.contrast + 10, MIN_CONTRAST, MAX_CONTRAST),
-                }))
-              }
-              className="rounded bg-white p-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:ring-gray-600 dark:hover:bg-gray-700"
-              title="Aumentar contraste (deixa o preto mais escuro)"
-            >
-              <Sun size={14} />
-            </button>
-            <div className="flex items-center gap-0.5">
+              <SunDim size={14} className="text-gray-500 dark:text-gray-400" />
+              <span className="font-medium text-gray-500 dark:text-gray-400">Ponto preto</span>
+              <input
+                type="range"
+                min={MIN_LEVEL}
+                max={MAX_LEVEL}
+                value={transform.levelsBlack}
+                onChange={(e) =>
+                  setTransform((t) => ({ ...t, levelsBlack: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className="w-14"
+              />
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, levelsBlack: clamp(t.levelsBlack - LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Diminuir ponto preto"
+              >
+                <Minus size={14} />
+              </button>
               <input
                 type="number"
-                value={transform.contrast}
+                value={transform.levelsBlack}
                 onChange={(e) => {
                   if (e.target.value === '') return
                   const v = Number(e.target.value)
                   if (Number.isNaN(v)) return
-                  setTransform((t) => ({ ...t, contrast: clamp(v, MIN_CONTRAST, MAX_CONTRAST) }))
+                  setTransform((t) => ({ ...t, levelsBlack: clamp(v, MIN_LEVEL, MAX_LEVEL) }))
                 }}
                 className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               />
-              <span className="text-gray-500 dark:text-gray-400">%</span>
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, levelsBlack: clamp(t.levelsBlack + LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Aumentar ponto preto"
+              >
+                <Plus size={14} />
+              </button>
             </div>
-          </div>
 
-          <button
-            onClick={() => setTransform(DEFAULT_IMAGE_TRANSFORM)}
-            className="flex items-center gap-1 rounded bg-white px-2 py-1 shadow-sm ring-1 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
-            title="Redefinir posição, zoom, rotação, espelhamento, contraste e cor"
-          >
-            <RefreshCw size={12} />
-            Redefinir
-          </button>
+            {/* Negativo */}
+            <div className="flex items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <button
+                onClick={() => setTransform((t) => ({ ...t, inverted: !t.inverted }))}
+                className={`flex w-full items-center justify-center gap-1 rounded px-1.5 py-0.5 ${
+                  transform.inverted
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                title="Inverter cores"
+              >
+                <Contrast size={14} />
+                Negativo
+              </button>
+            </div>
 
-          {otherImage && (
-            <button
-              onClick={() => setShowGhost((v) => !v)}
-              className={`flex items-center gap-1 rounded px-2 py-1 shadow-sm ring-1 ${
-                showGhost
-                  ? 'bg-blue-600 text-white ring-blue-600'
-                  : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
-              }`}
-              title="Sobrepor a outra imagem como molde para alinhar"
+            {/* Escurecer */}
+            <div
+              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              title="Escurecer: deixa a foto inteira mais escura por igual (sombras e claros juntos) — útil quando ela está apagada/clara demais"
             >
-              {showGhost ? <Eye size={14} /> : <EyeOff size={14} />}
-              Molde
-            </button>
-          )}
+              <Sun size={14} className="text-gray-500 dark:text-gray-400" />
+              <span className="font-medium text-gray-500 dark:text-gray-400">Escurecer</span>
+              <input
+                type="range"
+                min={MIN_LEVEL}
+                max={MAX_LEVEL}
+                value={transform.darken}
+                onChange={(e) =>
+                  setTransform((t) => ({ ...t, darken: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className="w-14"
+              />
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, darken: clamp(t.darken - LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Diminuir escurecer"
+              >
+                <Minus size={14} />
+              </button>
+              <input
+                type="number"
+                value={transform.darken}
+                onChange={(e) => {
+                  if (e.target.value === '') return
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return
+                  setTransform((t) => ({ ...t, darken: clamp(v, MIN_LEVEL, MAX_LEVEL) }))
+                }}
+                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, darken: clamp(t.darken + LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Aumentar escurecer"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+
+            {/* Espelhar */}
+            <div className="flex items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <button
+                onClick={() => setTransform((t) => ({ ...t, flipped: !t.flipped }))}
+                className={`flex w-full items-center justify-center gap-1 rounded px-1.5 py-0.5 ${
+                  transform.flipped
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                }`}
+                title="Espelhar horizontalmente (frontal/traseira)"
+              >
+                <FlipHorizontal2 size={14} />
+                Espelhar
+              </button>
+            </div>
+
+            {/* Redefinir */}
+            <div className="flex items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <button
+                onClick={() => setTransform(DEFAULT_IMAGE_TRANSFORM)}
+                className="flex w-full items-center justify-center gap-1 rounded px-1.5 py-0.5 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+                title="Redefinir posição, zoom, rotação, espelhamento e níveis"
+              >
+                <RefreshCw size={12} />
+                Redefinir
+              </button>
+            </div>
+
+            {/* Molde */}
+            {otherImage && (
+              <div className="flex items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+                <button
+                  onClick={() => setShowGhost((v) => !v)}
+                  className={`flex w-full items-center justify-center gap-1 rounded px-1.5 py-0.5 ${
+                    showGhost
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                  title="Sobrepor a outra imagem como molde para alinhar"
+                >
+                  {showGhost ? <Eye size={14} /> : <EyeOff size={14} />}
+                  Molde
+                </button>
+              </div>
+            )}
+          </div>
 
           <span className="text-gray-400 dark:text-gray-500">Arraste a imagem para mover</span>
         </div>

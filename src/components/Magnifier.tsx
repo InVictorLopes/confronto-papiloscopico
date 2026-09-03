@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Coordinate } from '../types'
+import { buildLevelsFilterParts } from '../levels'
 
 interface MagnifierProps {
   image: string
@@ -9,7 +10,8 @@ interface MagnifierProps {
   rotation?: number
   flipped?: boolean
   inverted?: boolean
-  contrast?: number
+  levelsBlack?: number
+  darken?: number
 }
 
 const SIZE = 230
@@ -23,7 +25,8 @@ export default function Magnifier({
   rotation = 0,
   flipped = false,
   inverted = false,
-  contrast = 100,
+  levelsBlack = 0,
+  darken = 0,
 }: MagnifierProps) {
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
 
@@ -75,9 +78,10 @@ export default function Magnifier({
             // o ponto para fora do centro da lupa.
             transformOrigin: `${originX}px ${originY}px`,
             transform: `rotate(${rotation}deg) scaleX(${flipped ? -1 : 1})`,
-            filter: [inverted ? 'invert(1)' : null, contrast !== 100 ? `contrast(${contrast}%)` : null]
-              .filter(Boolean)
-              .join(' ') || undefined,
+            filter:
+              [inverted ? 'invert(1)' : null, ...buildLevelsFilterParts(levelsBlack, darken)]
+                .filter(Boolean)
+                .join(' ') || undefined,
           }}
         />
         <div className="pointer-events-none absolute inset-0">

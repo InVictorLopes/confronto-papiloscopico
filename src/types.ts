@@ -41,7 +41,13 @@ export interface ImageTransform {
   panY: number
   flipped: boolean // espelhado horizontalmente
   inverted: boolean // cores em negativo
-  contrast: number // porcentagem, 100 = original, maior = preto mais escuro
+  // Níveis (inspirado no Ctrl+L do Photoshop), 0-254 cada, ambos aumentando pra
+  // escurecer: levelsBlack remapeia o ponto preto (escurece as sombras e aumenta
+  // o contraste, sem estourar pra branco como o filtro contrast() puro faria em
+  // imagens apagadas/claras); darken multiplica a imagem inteira por um fator <1
+  // (escurece tudo de forma uniforme, útil quando a foto inteira está clara demais).
+  levelsBlack: number
+  darken: number
 }
 
 export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
@@ -51,5 +57,6 @@ export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
   panY: 0,
   flipped: false,
   inverted: false,
-  contrast: 100,
+  levelsBlack: 0,
+  darken: 0,
 }
