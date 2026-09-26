@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type Dispatch,
   type MouseEvent,
   type PointerEvent,
@@ -34,7 +35,7 @@ import {
   ZoomOut,
 } from 'lucide-react'
 import type { Coordinate, ImageSlot, ImageTransform, Minutia } from '../types'
-import { DEFAULT_IMAGE_TRANSFORM } from '../types'
+import { DEFAULT_IMAGE_TRANSFORM, displayId } from '../types'
 import { buildLevelsFilterParts } from '../levels'
 
 interface ImagePanelProps {
@@ -55,7 +56,20 @@ interface ImagePanelProps {
   onMoveLabel: (id: number, offset: Coordinate) => void
   onStartEdit: (id: number) => void
   onEndEdit: () => void
+  adjustMode: boolean
+  onAdjustModeChange: (open: boolean) => void
+  // A barra de ajuste do OUTRO lado está aberta: reserva um espaço igual aqui para
+  // que os dois quadros continuem sempre do mesmo tamanho.
+  reserveSidebar: boolean
+  // Há espaço livre na lateral da página: a barra fica nesse espaço, fora da área dos
+  // quadros, e os quadros não encolhem. Sem espaço, ela ocupa uma coluna ao lado do quadro.
+  sidebarOutside: boolean
 }
+
+// Largura da barra de ajuste lateral (fica do lado de fora de cada quadro).
+export const SIDEBAR_WIDTH = 176
+// Distância entre a barra e o quadro quando ela fica no espaço livre da lateral.
+export const SIDEBAR_GAP = 12
 
 const MIN_ZOOM = 0.5
 // Alto o bastante para ampliar um dedo dentro de uma página inteira de prontuário
@@ -114,6 +128,10 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   onMoveLabel,
   onStartEdit,
   onEndEdit,
+  adjustMode,
+  onAdjustModeChange: setAdjustMode,
+  reserveSidebar,
+  sidebarOutside,
 }: ImagePanelProps, frameRef) {
   const viewportRef = useRef<HTMLDivElement>(null)
   useImperativeHandle(frameRef, () => viewportRef.current as HTMLDivElement)
@@ -131,7 +149,6 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const [baseSize, setBaseSize] = useState({ width: 0, height: 0 })
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
   const [otherNatural, setOtherNatural] = useState<{ w: number; h: number } | null>(null)
-  const [adjustMode, setAdjustMode] = useState(false)
   const [rotateDragMode, setRotateDragMode] = useState(false)
   const [showGhost, setShowGhost] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -462,7 +479,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         <div className="flex items-center gap-1">
           {image && (
             <button
-              onClick={() => setAdjustMode((m) => !m)}
+              onClick={() => setAdjustMode(!adjustMode)}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
                 adjustMode
                   ? 'bg-blue-600 text-white ring-blue-600'
@@ -490,12 +507,34 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         />
       </div>
 
-      {adjustMode && (
-        <div className="flex flex-col gap-1.5 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700">
-          <div className="grid grid-cols-2 gap-1">
+      {/* Quadro + barra de ajuste lateral: à esquerda do quadro A e à direita do quadro B. */}
+      <div className={`relative flex flex-col gap-2 ${slot === 'B' ? 'md:flex-row-reverse' : 'md:flex-row'}`}>
+      {(adjustMode || (reserveSidebar && !sidebarOutside)) && (
+        <div
+          className={
+            sidebarOutside
+              ? 'absolute top-0 bottom-0'
+              : `relative shrink-0 md:w-[var(--sidebar-w)] ${adjustMode ? '' : 'hidden md:block'}`
+          }
+          style={
+            sidebarOutside
+              ? {
+                  width: SIDEBAR_WIDTH,
+                  [slot === 'A' ? 'right' : 'left']: `calc(100% + ${SIDEBAR_GAP}px)`,
+                }
+              : ({ '--sidebar-w': `${SIDEBAR_WIDTH}px` } as CSSProperties)
+          }
+        >
+        {adjustMode && (
+        <div
+          className={`flex flex-col gap-1.5 rounded-md bg-gray-50 px-2 py-1.5 text-xs ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700 ${
+            sidebarOutside ? 'absolute inset-0 overflow-y-auto' : 'md:absolute md:inset-0 md:overflow-y-auto'
+          }`}
+        >
+          <div className="flex flex-col gap-1">
             {/* Zoom */}
-            <div className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Zoom</span>
+            <div className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
+              <span className="w-full font-medium text-gray-500 dark:text-gray-400">Zoom</span>
               <button
                 onClick={() => setTransform((t) => ({ ...t, zoom: clamp(t.zoom / 1.2, MIN_ZOOM, MAX_ZOOM) }))}
                 className={STEP_BTN_CLASS}
@@ -528,7 +567,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
             {/* Rotação */}
             <div className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
-              <span className="font-medium text-gray-500 dark:text-gray-400">Rotação</span>
+              <span className="w-full font-medium text-gray-500 dark:text-gray-400">Rotação</span>
               <input
                 type="range"
                 min={-180}
@@ -537,7 +576,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 onChange={(e) =>
                   setTransform((t) => ({ ...t, rotation: Number(e.target.value) }))
                 }
-                className="w-14"
+                className="w-full"
               />
               <button
                 onClick={() => setTransform((t) => ({ ...t, rotation: wrapAngle(t.rotation - 90) }))}
@@ -586,11 +625,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
             {/* Ponto preto */}
             <div
-              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
               title="Ponto preto: escurece as sombras e aumenta o contraste ao redor delas, sem mexer nos claros"
             >
-              <SunDim size={14} className="text-gray-500 dark:text-gray-400" />
-              <span className="font-medium text-gray-500 dark:text-gray-400">Ponto preto</span>
+              <span className="flex w-full items-center gap-1 font-medium text-gray-500 dark:text-gray-400">
+                <SunDim size={14} />
+                Ponto preto
+              </span>
               <input
                 type="range"
                 min={MIN_LEVEL}
@@ -599,7 +640,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 onChange={(e) =>
                   setTransform((t) => ({ ...t, levelsBlack: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
                 }
-                className="w-14"
+                className="w-full"
               />
               <button
                 onClick={() =>
@@ -650,11 +691,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
             {/* Escurecer */}
             <div
-              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
               title="Escurecer: deixa a foto inteira mais escura por igual (sombras e claros juntos) — útil quando ela está apagada/clara demais"
             >
-              <Sun size={14} className="text-gray-500 dark:text-gray-400" />
-              <span className="font-medium text-gray-500 dark:text-gray-400">Escurecer</span>
+              <span className="flex w-full items-center gap-1 font-medium text-gray-500 dark:text-gray-400">
+                <Sun size={14} />
+                Escurecer
+              </span>
               <input
                 type="range"
                 min={MIN_LEVEL}
@@ -663,7 +706,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 onChange={(e) =>
                   setTransform((t) => ({ ...t, darken: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
                 }
-                className="w-14"
+                className="w-full"
               />
               <button
                 onClick={() =>
@@ -698,11 +741,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
             {/* Clarear */}
             <div
-              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              className="flex flex-wrap items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
               title="Clarear: deixa a foto inteira mais clara por igual (sombras e claros juntos) — útil quando ela está escura demais"
             >
-              <SunMedium size={14} className="text-gray-500 dark:text-gray-400" />
-              <span className="font-medium text-gray-500 dark:text-gray-400">Clarear</span>
+              <span className="flex w-full items-center gap-1 font-medium text-gray-500 dark:text-gray-400">
+                <SunMedium size={14} />
+                Clarear
+              </span>
               <input
                 type="range"
                 min={MIN_LEVEL}
@@ -711,7 +756,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 onChange={(e) =>
                   setTransform((t) => ({ ...t, lighten: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
                 }
-                className="w-14"
+                className="w-full"
               />
               <button
                 onClick={() =>
@@ -792,9 +837,20 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
           </div>
 
           <span className="text-gray-400 dark:text-gray-500">Arraste a imagem para mover</span>
+
+          <button
+            onClick={() => setAdjustMode(false)}
+            className="flex w-full items-center justify-center gap-1 rounded-md bg-blue-600 px-2 py-1.5 font-medium text-white shadow-sm hover:bg-blue-700"
+          >
+            <Check size={14} />
+            Concluir ajuste
+          </button>
+        </div>
+        )}
         </div>
       )}
 
+      <div className="min-w-0 flex-1">
       <div
         ref={viewportRef}
         onClick={handleMarkClick}
@@ -923,9 +979,9 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                           fontWeight: 700,
                           fontSize: MARKER_SIZE * 0.55,
                         }}
-                        title={`Ponto ${m.id}`}
+                        title={`Ponto ${displayId(m.id)}`}
                       >
-                        {numberVisible ? m.id : ''}
+                        {numberVisible ? displayId(m.id) : ''}
                       </div>
                     </div>
                   </div>
@@ -958,6 +1014,8 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             </div>
           </div>
         )}
+      </div>
+      </div>
       </div>
     </div>
   )

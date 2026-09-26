@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronUp, Eye, EyeOff, PenLine, Trash2 } from 'lucide-react'
 import type { Minutia } from '../types'
+import { displayId, isWildcardId } from '../types'
 
 interface MinutiaeTableProps {
   minutiae: Minutia[]
@@ -11,21 +12,25 @@ interface MinutiaeTableProps {
 }
 
 function IdCell({ id, onChangeId }: { id: number; onChangeId: (oldId: number, newId: number) => boolean }) {
-  const [draft, setDraft] = useState(String(id))
+  const [draft, setDraft] = useState(displayId(id))
   const [invalid, setInvalid] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Mantém o campo sincronizado quando o número muda por fora (ex: exclusão de outro ponto),
   // sem sobrescrever o que o usuário está digitando neste momento.
   useEffect(() => {
-    if (document.activeElement !== inputRef.current) setDraft(String(id))
+    if (document.activeElement !== inputRef.current) setDraft(displayId(id))
   }, [id])
 
   function commit() {
+    if (draft.trim().toUpperCase() === displayId(id)) {
+      setDraft(displayId(id))
+      return
+    }
     const n = Number(draft)
     if (draft.trim() === '' || !onChangeId(id, n)) {
       setInvalid(true)
-      setDraft(String(id))
+      setDraft(displayId(id))
       window.setTimeout(() => setInvalid(false), 1200)
       return
     }
@@ -36,21 +41,30 @@ function IdCell({ id, onChangeId }: { id: number; onChangeId: (oldId: number, ne
     <div className="flex items-center gap-1.5">
       <input
         ref={inputRef}
-        type="number"
-        min={1}
+        type="text"
+        inputMode="numeric"
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commit}
         onKeyDown={(e) => {
           if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
           if (e.key === 'Escape') {
-            setDraft(String(id))
+            setDraft(displayId(id))
             setInvalid(false)
           }
         }}
-        title="Editar o número deste ponto"
-        className={`h-8 w-14 rounded-full border-2 bg-white text-center font-bold [appearance:textfield] dark:bg-gray-900 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
-          invalid ? 'border-amber-500 text-amber-600' : 'border-red-600 text-red-600'
+        onFocus={(e) => e.target.select()}
+        title={
+          isWildcardId(id)
+            ? 'Ponto sem número (XX): o número dele foi dado a outro ponto — digite um novo número'
+            : 'Editar o número deste ponto'
+        }
+        className={`h-8 w-14 rounded-full border-2 bg-white text-center font-bold dark:bg-gray-900 ${
+          invalid
+            ? 'border-amber-500 text-amber-600'
+            : isWildcardId(id)
+              ? 'border-dashed border-amber-500 text-amber-600'
+              : 'border-red-600 text-red-600'
         }`}
         style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
       />

@@ -594,7 +594,7 @@
         <p><span class="chip">Desfazer último ponto</span> remove o ponto mais recente (mesmo que ainda esteja pendente, aguardando o lado B). Para remover um ponto específico da lista, use o botão de lixeira na linha correspondente da tabela, abaixo das imagens. Ao excluir, o próximo ponto marcado reaproveita esse número — a numeração nunca fica com buracos.</p>
 
         <h3>Renumerar um ponto</h3>
-        <p>O número de cada linha da tabela é um campo editável — ao lado dele fica o botão <span class="chip">✎ Alterar número</span>. Clique no número (ou no botão), digite o novo número e tecle Enter. Se o número já estiver em uso por outro ponto, a edição é recusada e o campo volta ao valor original.</p>
+        <p>O número de cada linha da tabela é um campo editável — ao lado dele fica o botão <span class="chip">✎ Alterar número</span>. Clique no número (ou no botão), digite o novo número e tecle Enter. Se o número já estiver em uso por outro ponto, o ponto que você editou fica com ele, e o ponto que tinha aquele número passa a aparecer como <strong>XX</strong> (coringa) — nas imagens e na tabela, com a borda tracejada em laranja — até você dar um novo número a ele. Pode haver mais de um XX ao mesmo tempo; confira que nenhum sobrou antes de exportar o laudo.</p>
 
         <h3>Reordenar a lista</h3>
         <p>As setinhas <span class="chip">▲</span> / <span class="chip">▼</span> ao lado de cada linha movem aquele ponto para cima ou para baixo na tabela — útil para reagrupar visualmente depois de excluir e remarcar um ponto no meio da lista.</p>
@@ -603,6 +603,7 @@
       <section id="ajustar">
         <div class="sec-head"><span class="sec-num">04</span><h2>Ajustar a imagem</h2></div>
         <p class="lead">Clique em <span class="chip">Ajustar imagem</span>, no canto de qualquer painel, para abrir a barra de ajuste daquele lado.</p>
+        <p>A barra abre na <strong>lateral de fora</strong> de cada quadro: à esquerda da Imagem&nbsp;A e à direita da Imagem&nbsp;B. Em telas largas, ela ocupa o espaço vazio da lateral da página e os quadros <strong>não mudam de tamanho</strong>. Em telas mais estreitas, onde esse espaço não existe, a barra entra ao lado do quadro e os dois quadros diminuem um pouco (sempre juntos, para continuarem do mesmo tamanho), voltando ao normal ao clicar em <span class="chip">Concluir ajuste</span>. Se os controles não couberem na altura do quadro, role a barra para ver o resto.</p>
 
         <div class="grid-cards">
           <div class="card">
@@ -690,6 +691,10 @@
         <p style="margin-top:1.1rem">Um campo de <strong>identificador do caso</strong> mostra o modelo <span class="chip">confronto_papiloscopico_CAD_(campo editável)_DD_MM_AAAA</span> — só a parte entre parênteses é digitável; o resto (prefixo e data) é fixo e se repete, com o prefixo certo, em cada um dos quatro arquivos. Digite o identificador uma vez e ele se aplica a todos.</p>
         <p>Se precisar de um nome totalmente diferente para um arquivo específico, clique no ícone de lápis ao lado dele — abre um campo com o nome automático já preenchido, pronto para editar por completo. Um link <span class="chip">Restaurar</span> aparece para voltar a seguir o identificador do caso.</p>
         <p>Confirme com <span class="chip">Exportar</span>; cada opção marcada vira um download imediato.</p>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div>Se ainda existir algum ponto sem número (<strong>XX</strong>), o sistema avisa antes de abrir a exportação e pergunta se deseja exportar mesmo assim — cancele para renumerar esses pontos primeiro.</div>
+        </div>
       </section>
 
       <section id="edicao">
@@ -705,7 +710,7 @@
 
       <section id="tema">
         <div class="sec-head"><span class="sec-num">10</span><h2>Tema e privacidade</h2></div>
-        <p class="lead">O ícone de sol/lua no canto superior direito alterna entre tema claro e escuro — a escolha fica salva no navegador.</p>
+        <p class="lead">O botão <span class="chip">Modo escuro</span> / <span class="chip">Modo claro</span>, no canto superior direito, alterna entre os dois temas — a escolha fica salva no navegador.</p>
         <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
       </section>
 
@@ -733,11 +738,11 @@
               <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de seleção de arquivos e nomes</td></tr>
               <tr><td class="chip">Mostrar números</td><td>Barra acima da tabela</td><td>Esconde/mostra o número de todos os pontos</td></tr>
               <tr><td class="chip">Modo linha</td><td>Barra acima da tabela</td><td>Arrastar move só o número, com linha até o ponto; trava a marcação de pontos novos</td></tr>
-              <tr><td class="chip">✎ Alterar número</td><td>Tabela de pontos</td><td>Clique (ou clique no número) para renumerar aquele ponto</td></tr>
+              <tr><td class="chip">✎ Alterar número</td><td>Tabela de pontos</td><td>Clique (ou clique no número) para renumerar aquele ponto; se o número já existir, o outro ponto vira XX</td></tr>
               <tr><td>Setinhas ▲ / ▼</td><td>Tabela de pontos</td><td>Move aquele ponto para cima/baixo na lista</td></tr>
               <tr><td>Ícone de olho</td><td>Tabela de pontos</td><td>Oculta o número de um ponto específico</td></tr>
               <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par (o número fica livre pro próximo)</td></tr>
-              <tr><td>Sol / Lua</td><td>Cabeçalho</td><td>Alterna tema claro/escuro</td></tr>
+              <tr><td class="chip">Modo escuro / Modo claro</td><td>Cabeçalho</td><td>Alterna entre os temas escuro e claro</td></tr>
             </tbody>
           </table>
         </div>

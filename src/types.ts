@@ -15,6 +15,19 @@ export interface Minutia {
 
 export const ZERO_OFFSET: Coordinate = { x: 0, y: 0 }
 
+// Ponto "coringa": quando um ponto é renumerado para um número que já estava em uso,
+// o ponto que tinha aquele número fica sem número definido e aparece como XX até ser
+// renumerado. Internamente recebe um id negativo único (-1, -2, ...).
+export const WILDCARD_LABEL = 'XX'
+
+export function isWildcardId(id: number) {
+  return id < 0
+}
+
+export function displayId(id: number) {
+  return isWildcardId(id) ? WILDCARD_LABEL : String(id)
+}
+
 export type ComparisonStep = 'WAITING_A' | 'WAITING_B'
 
 export interface AppState {

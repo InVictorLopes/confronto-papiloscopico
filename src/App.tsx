@@ -1,9 +1,9 @@
-import { useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
 import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, ImageSlot, ImageTransform, ProjectFile } from './types'
-import { DEFAULT_IMAGE_TRANSFORM } from './types'
-import ImagePanel, { FRAME_COLOR } from './components/ImagePanel'
+import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
+import ImagePanel, { FRAME_COLOR, SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
 import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import Magnifier from './components/Magnifier'
@@ -15,6 +15,10 @@ import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
 // Altura reservada para as lupas: lupa (205) + rótulo + espaçamentos do cartão.
 const MAGNIFIER_AREA_HEIGHT = 265
+// Padding (p-2) da área dos quadros, entre a borda dela e o quadro.
+const CAPTURE_PADDING = 8
+// Folga mínima entre a barra de ajuste e a borda da janela.
+const PAGE_EDGE_MARGIN = 8
 
 function buildDateSuffix() {
   const d = new Date()
@@ -90,6 +94,31 @@ export default function App() {
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
   const [transformA, setTransformA] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
   const [transformB, setTransformB] = useState<ImageTransform>(DEFAULT_IMAGE_TRANSFORM)
+  // Barra de ajuste lateral aberta em cada lado (controlada aqui para o outro lado reservar o mesmo espaço).
+  const [adjustA, setAdjustA] = useState(false)
+  const [adjustB, setAdjustB] = useState(false)
+  const [sidebarOutside, setSidebarOutside] = useState(false)
+
+  // A barra de ajuste só vai para o espaço vazio das laterais da página quando ela cabe
+  // ali inteira; senão ela ocupa uma coluna ao lado do quadro (e os quadros encolhem).
+  useLayoutEffect(() => {
+    function measure() {
+      const el = captureRef.current
+      if (!el) return
+      const frameLeft = el.getBoundingClientRect().left + CAPTURE_PADDING
+      setSidebarOutside(frameLeft >= SIDEBAR_WIDTH + SIDEBAR_GAP + PAGE_EDGE_MARGIN)
+    }
+    measure()
+    // Além do resize da janela, observa a largura da página (zoom do navegador, barra de
+    // rolagem aparecendo etc.), que também muda o espaço livre nas laterais.
+    const ro = new ResizeObserver(measure)
+    ro.observe(document.documentElement)
+    window.addEventListener('resize', measure)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
   const captureRef = useRef<HTMLDivElement>(null)
   const panelARef = useRef<HTMLDivElement>(null)
   const panelBRef = useRef<HTMLDivElement>(null)
@@ -184,11 +213,19 @@ export default function App() {
   function handleChangeId(oldId: number, newId: number): boolean {
     if (!Number.isInteger(newId) || newId <= 0) return false
     if (oldId === newId) return true
-    if (state.minutiae.some((m) => m.id === newId)) return false
-    setState((prev) => ({
-      ...prev,
-      minutiae: prev.minutiae.map((m) => (m.id === oldId ? { ...m, id: newId } : m)),
-    }))
+    setState((prev) => {
+      // Se o número já estiver em uso, o ponto que o tinha vira coringa (XX), com um id
+      // negativo livre, em vez de a renumeração ser recusada.
+      const wildcardId = Math.min(0, ...prev.minutiae.map((m) => m.id)) - 1
+      return {
+        ...prev,
+        minutiae: prev.minutiae.map((m) => {
+          if (m.id === oldId) return { ...m, id: newId }
+          if (m.id === newId) return { ...m, id: wildcardId }
+          return m
+        }),
+      }
+    })
     return true
   }
 
@@ -272,6 +309,19 @@ export default function App() {
     }
   }
 
+  // Avisa antes de exportar se ainda houver ponto coringa (XX), que sairia assim no laudo.
+  function handleExportClick() {
+    const wildcards = state.minutiae.filter((m) => isWildcardId(m.id)).length
+    if (wildcards > 0) {
+      const msg =
+        wildcards === 1
+          ? `Existe 1 ponto sem número (${WILDCARD_LABEL}). Ele vai aparecer como ${WILDCARD_LABEL} na exportação.\n\nDeseja exportar mesmo assim?`
+          : `Existem ${wildcards} pontos sem número (${WILDCARD_LABEL}). Eles vão aparecer como ${WILDCARD_LABEL} na exportação.\n\nDeseja exportar mesmo assim?`
+      if (!window.confirm(msg)) return
+    }
+    setShowExportDialog(true)
+  }
+
   function performSaveProject(filename: string) {
     setShowSaveDialog(false)
     downloadProjectFile(`${sanitizeFilename(filename)}.json`)
@@ -323,10 +373,11 @@ export default function App() {
         </a>
         <button
           onClick={toggleTheme}
-          className="rounded-md bg-white p-2 text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
-          title={theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
+          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+          title={theme === 'dark' ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'}
         >
           {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
         </button>
       </header>
 
@@ -336,7 +387,7 @@ export default function App() {
         hasImages={hasImages}
         onUndo={handleUndo}
         canUndo={state.minutiae.length > 0}
-        onExport={() => setShowExportDialog(true)}
+        onExport={handleExportClick}
         canExport={hasImages && completedPairs > 0}
         exporting={exporting}
         onSaveProject={() => setShowSaveDialog(true)}
@@ -439,6 +490,10 @@ export default function App() {
           onMoveLabel={(id, offset) => handleMoveLabel('A', id, offset)}
           onStartEdit={(id) => handleStartEdit('A', id)}
           onEndEdit={handleEndEdit}
+          adjustMode={adjustA}
+          onAdjustModeChange={setAdjustA}
+          reserveSidebar={adjustB}
+          sidebarOutside={sidebarOutside}
         />
         <ImagePanel
           ref={panelBRef}
@@ -459,6 +514,10 @@ export default function App() {
           onMoveLabel={(id, offset) => handleMoveLabel('B', id, offset)}
           onStartEdit={(id) => handleStartEdit('B', id)}
           onEndEdit={handleEndEdit}
+          adjustMode={adjustB}
+          onAdjustModeChange={setAdjustB}
+          reserveSidebar={adjustA}
+          sidebarOutside={sidebarOutside}
         />
       </div>
 
