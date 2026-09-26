@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, Eye, EyeOff, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Eye, EyeOff, PenLine, Trash2 } from 'lucide-react'
 import type { Minutia } from '../types'
 
 interface MinutiaeTableProps {
@@ -33,26 +33,38 @@ function IdCell({ id, onChangeId }: { id: number; onChangeId: (oldId: number, ne
   }
 
   return (
-    <input
-      ref={inputRef}
-      type="number"
-      min={1}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-        if (e.key === 'Escape') {
-          setDraft(String(id))
-          setInvalid(false)
-        }
-      }}
-      title="Editar o número deste ponto"
-      className={`h-8 w-14 rounded-full border-2 bg-white text-center font-bold [appearance:textfield] dark:bg-gray-900 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
-        invalid ? 'border-amber-500 text-amber-600' : 'border-red-600 text-red-600'
-      }`}
-      style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
-    />
+    <div className="flex items-center gap-1.5">
+      <input
+        ref={inputRef}
+        type="number"
+        min={1}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+          if (e.key === 'Escape') {
+            setDraft(String(id))
+            setInvalid(false)
+          }
+        }}
+        title="Editar o número deste ponto"
+        className={`h-8 w-14 rounded-full border-2 bg-white text-center font-bold [appearance:textfield] dark:bg-gray-900 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+          invalid ? 'border-amber-500 text-amber-600' : 'border-red-600 text-red-600'
+        }`}
+        style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}
+      />
+      {/* Indica que o número é editável; clicar nele também abre a edição. */}
+      <button
+        type="button"
+        onClick={() => inputRef.current?.select()}
+        className="flex items-center gap-1 rounded px-1.5 py-1 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300"
+        title="Número editável — clique para alterar"
+      >
+        <PenLine size={14} />
+        Alterar número
+      </button>
+    </div>
   )
 }
 

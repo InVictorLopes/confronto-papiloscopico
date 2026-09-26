@@ -7,14 +7,17 @@ interface MagnifierProps {
   point: Coordinate
   label: string
   variant: 'editing' | 'reference'
+  color: string
   rotation?: number
   flipped?: boolean
   inverted?: boolean
   levelsBlack?: number
   darken?: number
+  lighten?: number
+  zoom?: number
 }
 
-const SIZE = 230
+const SIZE = 205
 const ZOOM = 3.2
 
 export default function Magnifier({
@@ -22,11 +25,14 @@ export default function Magnifier({
   point,
   label,
   variant,
+  color,
   rotation = 0,
   flipped = false,
   inverted = false,
   levelsBlack = 0,
   darken = 0,
+  lighten = 0,
+  zoom = 1,
 }: MagnifierProps) {
   const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
 
@@ -42,27 +48,34 @@ export default function Magnifier({
     }
   }, [image])
 
-  const bgWidth = SIZE * ZOOM
+  // A lupa acompanha o zoom do painel (senão, numa página inteira de prontuário, o dedo
+  // ficaria minúsculo nela), mas sem passar de 2x a resolução real da imagem — acima
+  // disso não há mais detalhe para mostrar, só um elemento gigante e pesado.
+  const maxBgWidth = natural ? natural.w * 2 : SIZE * ZOOM
+  const bgWidth = Math.max(SIZE * ZOOM, Math.min(SIZE * ZOOM * zoom, maxBgWidth))
   const bgHeight = natural ? bgWidth * (natural.h / natural.w) : SIZE * ZOOM
   const originX = (point.x / 100) * bgWidth
   const originY = (point.y / 100) * bgHeight
   const bgLeft = SIZE / 2 - originX
   const bgTop = SIZE / 2 - originY
 
-  const accent = variant === 'editing' ? 'border-blue-500' : 'border-amber-500'
-
+  // A cor é sempre a do quadro da imagem (A vermelho, B azul); o rótulo cheio indica
+  // qual lado está sendo editado e o rótulo vazado, o de referência.
   return (
     <div className="flex flex-col items-center gap-1">
       <span
-        className={`rounded px-2 py-0.5 text-[11px] font-semibold text-white ${
-          variant === 'editing' ? 'bg-blue-500' : 'bg-amber-500'
-        }`}
+        className="rounded border px-2 py-0.5 text-[11px] font-semibold"
+        style={
+          variant === 'editing'
+            ? { backgroundColor: color, borderColor: color, color: '#ffffff' }
+            : { backgroundColor: 'transparent', borderColor: color, color }
+        }
       >
         {label}
       </span>
       <div
-        className={`relative overflow-hidden rounded-full border-4 bg-gray-200 shadow-xl dark:bg-gray-700 ${accent}`}
-        style={{ width: SIZE, height: SIZE }}
+        className="relative overflow-hidden rounded-full border-4 bg-gray-200 shadow-xl dark:bg-gray-700"
+        style={{ width: SIZE, height: SIZE, borderColor: color }}
       >
         <div
           style={{
@@ -79,7 +92,7 @@ export default function Magnifier({
             transformOrigin: `${originX}px ${originY}px`,
             transform: `rotate(${rotation}deg) scaleX(${flipped ? -1 : 1})`,
             filter:
-              [inverted ? 'invert(1)' : null, ...buildLevelsFilterParts(levelsBlack, darken)]
+              [inverted ? 'invert(1)' : null, ...buildLevelsFilterParts(levelsBlack, darken, lighten)]
                 .filter(Boolean)
                 .join(' ') || undefined,
           }}

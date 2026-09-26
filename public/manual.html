@@ -535,7 +535,7 @@
         <div class="sec-head"><span class="sec-num">01</span><h2>Comece por aqui</h2></div>
         <p class="lead">O fluxo essencial, do zero ao laudo exportado.</p>
         <ol class="steps">
-          <li><span>Clique no quadro vazio e carregue a <strong>Imagem Questionada&nbsp;(A)</strong>.</span></li>
+          <li><span>Clique no quadro vazio e carregue a <strong>Imagem Questionada&nbsp;(A)</strong> — uma imagem ou um PDF.</span></li>
           <li><span>Faça o mesmo no outro quadro para carregar a <strong>Imagem Padrão&nbsp;(B)</strong>.</span></li>
           <li><span>Clique num ponto característico na Imagem A. Ele fica pendente, esperando o correspondente.</span></li>
           <li><span>Clique no mesmo ponto na Imagem B. O par fica completo e o contador avança.</span></li>
@@ -548,6 +548,10 @@
         <div class="sec-head"><span class="sec-num">02</span><h2>Carregar as imagens</h2></div>
         <p class="lead">As duas imagens sempre aparecem no mesmo quadro <strong>quadrado</strong>, não importa a resolução ou proporção do arquivo original — a Questionada dentro de uma caixinha vermelha, a Padrão dentro de uma azul.</p>
         <p>Clique em qualquer um dos dois quadros (ou no botão <span class="chip">Carregar imagem</span> / <span class="chip">Trocar imagem</span> no canto de cada painel) para escolher um arquivo do seu computador. Antes de carregar, o quadro mostra um ícone de impressão digital como espaço reservado.</p>
+
+        <h3>Carregar um PDF</h3>
+        <p>Além de imagens (JPG, PNG etc.), os quadros aceitam <strong>PDF</strong> — por exemplo, o prontuário digitalizado. A página é convertida em imagem a <strong>600&nbsp;dpi</strong>, a mesma resolução usada na digitalização, para as cristas manterem o detalhe ao dar zoom. Se o PDF tiver mais de uma página, o sistema pergunta qual delas usar; basta digitar o número da página (cancelar desiste do carregamento).</p>
+        <p>Não é mais preciso converter o prontuário para JPG no Photoshop antes — o PDF pode ser carregado direto.</p>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
           <div><strong>Trocar imagem</strong> apaga todos os pontos marcados nesse confronto — as posições antigas não fazem mais sentido numa foto diferente. A marcação recomeça do zero.</div>
@@ -583,11 +587,14 @@
         <h3>Corrigindo um ponto</h3>
         <p>Clique e arraste o marcador diretamente sobre a imagem — em qualquer um dos dois lados, a qualquer momento, mesmo depois do par estar completo. Não precisa apagar e marcar de novo. O marcador nunca sai do quadro: se você arrastar até a borda, ele para exatamente ali.</p>
 
+        <h3>Pontos muito próximos</h3>
+        <p>Pode marcar um ponto novo colado a um já existente — até clicando em cima da bolinha dele. Um clique simples, sem arrastar, sempre marca o <em>ponto novo</em>; só quando o mouse realmente se move enquanto está pressionado é que o ponto existente passa a ser arrastado (e as lupas abrem).</p>
+
         <h3>Desfazer e excluir</h3>
         <p><span class="chip">Desfazer último ponto</span> remove o ponto mais recente (mesmo que ainda esteja pendente, aguardando o lado B). Para remover um ponto específico da lista, use o botão de lixeira na linha correspondente da tabela, abaixo das imagens. Ao excluir, o próximo ponto marcado reaproveita esse número — a numeração nunca fica com buracos.</p>
 
         <h3>Renumerar um ponto</h3>
-        <p>O número de cada linha da tabela é um campo editável: clique nele e digite outro número. Se o número já estiver em uso por outro ponto, a edição é recusada e o campo volta ao valor original.</p>
+        <p>O número de cada linha da tabela é um campo editável — ao lado dele fica o botão <span class="chip">✎ Alterar número</span>. Clique no número (ou no botão), digite o novo número e tecle Enter. Se o número já estiver em uso por outro ponto, a edição é recusada e o campo volta ao valor original.</p>
 
         <h3>Reordenar a lista</h3>
         <p>As setinhas <span class="chip">▲</span> / <span class="chip">▼</span> ao lado de cada linha movem aquele ponto para cima ou para baixo na tabela — útil para reagrupar visualmente depois de excluir e remarcar um ponto no meio da lista.</p>
@@ -600,7 +607,7 @@
         <div class="grid-cards">
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M9 11h4"/></svg>Zoom</h4>
-            <p>Botões de − / + ou o campo numérico — de 50% a 500%.</p>
+            <p>Botões de − / +, a roda do mouse ou o campo numérico — de 50% a 5000%. O zoom alto serve para prontuários: numa página inteira, o dedo ocupa uma área pequena e precisa de bastante ampliação para ficar do tamanho da imagem questionada.</p>
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Rotação</h4>
@@ -623,13 +630,17 @@
             <p>Deixa a foto inteira mais escura por igual (sombras e claros juntos) — o ajuste certo quando a imagem inteira está apagada ou clara demais.</p>
           </div>
           <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>Clarear</h4>
+            <p>O inverso do Escurecer: deixa a foto inteira mais clara por igual (até 3x) — o ajuste certo quando a imagem está escura demais. Pode ser combinado com os outros níveis.</p>
+          </div>
+          <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>Redefinir</h4>
             <p>Volta zoom, rotação, espelhamento e níveis desse lado ao estado original.</p>
           </div>
         </div>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
-          <div><strong>Ponto preto</strong> e <strong>Escurecer</strong> substituíram o antigo controle de "Contraste": o contraste puro sempre estica os tons em torno do cinza-médio, e por isso podia estourar pra branco (sumindo linhas) em imagens já claras/apagadas. Os dois novos controles resolvem isso com um ponto de referência ajustável.</div>
+          <div><strong>Ponto preto</strong>, <strong>Escurecer</strong> e <strong>Clarear</strong> substituíram o antigo controle de "Contraste": o contraste puro sempre estica os tons em torno do cinza-médio, e por isso podia estourar pra branco (sumindo linhas) em imagens já claras/apagadas. Os novos controles resolvem isso com um ponto de referência ajustável.</div>
         </div>
 
         <p style="margin-top:1.1rem">Todo controle numérico tem um campinho ao lado do slider — dá pra arrastar <em>ou</em> digitar o valor exato.</p>
@@ -638,13 +649,16 @@
       <section id="molde">
         <div class="sec-head"><span class="sec-num">05</span><h2>O molde</h2></div>
         <p class="lead">Com o ajuste aberto, o botão <span class="chip">Molde</span> sobrepõe a <em>outra</em> imagem, semitransparente, por cima da que você está ajustando.</p>
-        <p>Assim dá para alinhar visualmente as duas digitais — corrigir enquadramento, rotação ou zoom de um lado enquanto compara diretamente com o outro. Desligue o molde a qualquer momento se ele atrapalhar a visualização.</p>
+        <p>Assim dá para alinhar visualmente as duas digitais — corrigir enquadramento, rotação ou zoom de um lado enquanto compara diretamente com o outro.</p>
+        <p>O molde vem <strong>desligado</strong> por padrão: clique em <span class="chip">Molde</span> para ligar quando precisar, e de novo para desligar se ele atrapalhar a visualização.</p>
       </section>
 
       <section id="lupas">
         <div class="sec-head"><span class="sec-num">06</span><h2>Lupas de precisão</h2></div>
-        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem logo abaixo dos dois quadros de imagem.</p>
-        <p>A da esquerda mostra sempre a <strong>Imagem&nbsp;A</strong>, a da direita sempre a <strong>Imagem&nbsp;B</strong> — a que está sendo editada fica com borda azul (“Editando”), a outra com borda âmbar (“Referência”), para comparar a cristalização da minúcia enquanto você posiciona. As duas respeitam a rotação, o espelhamento e a inversão de cor já aplicados naquele lado. Soltam sozinhas assim que você solta o ponto.</p>
+        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem logo acima dos dois quadros de imagem.</p>
+        <p>Esse espaço acima dos quadros fica sempre reservado (com um aviso tracejado quando nenhuma lupa está aberta), então abrir ou fechar as lupas não empurra os quadros para baixo durante a marcação.</p>
+        <p>A da esquerda mostra sempre a <strong>Imagem&nbsp;A</strong>, com borda <strong>vermelha</strong>; a da direita sempre a <strong>Imagem&nbsp;B</strong>, com borda <strong>azul</strong> — as mesmas cores dos quadros. O rótulo cheio (“Editando”) indica o lado que você está arrastando; o rótulo só com contorno (“Referência”) é o outro lado, para comparar a minúcia enquanto você posiciona.</p>
+        <p>As duas respeitam a rotação, o espelhamento, a inversão de cor, os níveis e o zoom já aplicados naquele lado — num prontuário ampliado, a lupa amplia junto. Somem sozinhas assim que você solta o ponto.</p>
       </section>
 
       <section id="aparencia">
@@ -652,13 +666,15 @@
         <p class="lead">A marcação segue um padrão fixo, igual em todo confronto — pensado pra ficar consistente entre laudos, então não dá pra mudar cor, tamanho ou espessura.</p>
 
         <h3>Bolinha branca, número vermelho</h3>
-        <p>Todo ponto é uma bolinha branca com borda e número vermelhos. Quando o número está deslocado (veja <strong>Modo linha</strong> abaixo), o ponto real na imagem fica marcado com uma bolinha vermelha menor, do tamanho da linha que o liga ao número.</p>
+        <p>Todo ponto é uma bolinha branca com borda e número vermelhos. Quando o número está deslocado (veja <strong>Modo linha</strong> abaixo), o ponto real na imagem fica marcado com uma bolinha vermelha pequena, com contorno branco, no começo da linha que o liga ao número.</p>
+        <p>Números, bolinhas e linhas têm sempre o <strong>mesmo tamanho na tela</strong>, nas duas imagens, qualquer que seja o zoom de cada lado — o zoom amplia só a digital, nunca a marcação.</p>
 
         <h3>Ocultar números</h3>
-        <p>O botão de olho em cada linha da tabela esconde o número <em>daquele</em> ponto; o botão <span class="chip">Mostrar números</span>, na barra debaixo da tabela, esconde ou mostra o número de <em>todos</em> de uma vez.</p>
+        <p>O botão de olho em cada linha da tabela esconde o número <em>daquele</em> ponto; o botão <span class="chip">Mostrar números</span>, na barra logo acima da tabela, esconde ou mostra o número de <em>todos</em> de uma vez.</p>
 
         <h3>Modo linha</h3>
         <p>Ligue <span class="chip">Modo linha</span> antes de arrastar um ponto para mover só o <em>número</em>, deixando o ponto real fixo onde foi marcado — útil quando dois pontos ficam muito próximos e os números se sobrepõem. Uma linha reta liga o número à posição real (sem cabeça de seta). Desligado (padrão), arrastar move o ponto normalmente. Em qualquer um dos dois modos, a bolinha nunca sai do quadro.</p>
+        <p>Enquanto o modo linha estiver ligado, a <strong>marcação de novos pontos fica travada</strong> — clicar na imagem não cria ponto, só arrastar os números existentes. Um aviso ao lado do botão lembra disso; desligue o modo linha para voltar a marcar.</p>
       </section>
 
       <section id="exportar">
@@ -702,21 +718,22 @@
               <tr><th>Controle</th><th>Onde</th><th>O que faz</th></tr>
             </thead>
             <tbody>
-              <tr><td class="chip">Carregar imagem</td><td>Painel A / B</td><td>Escolhe o arquivo de imagem local</td></tr>
+              <tr><td class="chip">Carregar imagem</td><td>Painel A / B</td><td>Escolhe a imagem ou o PDF local</td></tr>
               <tr><td class="chip">Trocar imagem</td><td>Painel A / B</td><td>Troca a foto e apaga os pontos marcados</td></tr>
-              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom, rotação, espelhar, negativo, níveis</td></tr>
+              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom (até 5000%), rotação, espelhar, negativo, níveis</td></tr>
               <tr><td class="chip">Girar na foto</td><td>Barra de ajuste</td><td>Arrastar dentro da imagem gira ela livremente</td></tr>
               <tr><td class="chip">Ponto preto</td><td>Barra de ajuste</td><td>Escurece as sombras e aumenta o contraste</td></tr>
               <tr><td class="chip">Escurecer</td><td>Barra de ajuste</td><td>Escurece a foto inteira, por igual</td></tr>
-              <tr><td class="chip">Molde</td><td>Barra de ajuste</td><td>Sobrepõe a outra imagem, semitransparente</td></tr>
+              <tr><td class="chip">Clarear</td><td>Barra de ajuste</td><td>Clareia a foto inteira, por igual</td></tr>
+              <tr><td class="chip">Molde</td><td>Barra de ajuste</td><td>Sobrepõe a outra imagem, semitransparente (vem desligado)</td></tr>
               <tr><td class="chip">Redefinir</td><td>Barra de ajuste</td><td>Zera zoom, rotação, espelhamento e níveis</td></tr>
               <tr><td class="chip">Desfazer último ponto</td><td>Barra de status</td><td>Remove o ponto mais recente</td></tr>
               <tr><td class="chip">Abrir edição</td><td>Barra de status</td><td>Recarrega um confronto salvo em .json</td></tr>
               <tr><td class="chip">Salvar edição</td><td>Barra de status</td><td>Salva imagens, pontos e ajustes num .json editável</td></tr>
               <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de seleção de arquivos e nomes</td></tr>
-              <tr><td class="chip">Mostrar números</td><td>Barra inferior</td><td>Esconde/mostra o número de todos os pontos</td></tr>
-              <tr><td class="chip">Modo linha</td><td>Barra inferior</td><td>Arrastar passa a mover só o número, com linha até o ponto</td></tr>
-              <tr><td>Número editável</td><td>Tabela de pontos</td><td>Clique para renumerar aquele ponto</td></tr>
+              <tr><td class="chip">Mostrar números</td><td>Barra acima da tabela</td><td>Esconde/mostra o número de todos os pontos</td></tr>
+              <tr><td class="chip">Modo linha</td><td>Barra acima da tabela</td><td>Arrastar move só o número, com linha até o ponto; trava a marcação de pontos novos</td></tr>
+              <tr><td class="chip">✎ Alterar número</td><td>Tabela de pontos</td><td>Clique (ou clique no número) para renumerar aquele ponto</td></tr>
               <tr><td>Setinhas ▲ / ▼</td><td>Tabela de pontos</td><td>Move aquele ponto para cima/baixo na lista</td></tr>
               <tr><td>Ícone de olho</td><td>Tabela de pontos</td><td>Oculta o número de um ponto específico</td></tr>
               <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par (o número fica livre pro próximo)</td></tr>

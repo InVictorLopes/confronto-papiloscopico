@@ -3,15 +3,18 @@ import html2canvas from 'html2canvas-pro'
 import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM } from './types'
-import ImagePanel from './components/ImagePanel'
+import ImagePanel, { FRAME_COLOR } from './components/ImagePanel'
 import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import Magnifier from './components/Magnifier'
 import ExportDialog from './components/ExportDialog'
 import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
 import { useTheme } from './useTheme'
+import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
 
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
+// Altura reservada para as lupas: lupa (205) + rótulo + espaçamentos do cartão.
+const MAGNIFIER_AREA_HEIGHT = 265
 
 function buildDateSuffix() {
   const d = new Date()
@@ -65,6 +68,17 @@ function readFileAsText(file: File): Promise<string> {
   })
 }
 
+// PDF com várias páginas: pergunta qual delas usar (null = cancelado).
+function askPdfPage(numPages: number): number | null {
+  let answer = window.prompt(`Esse PDF tem ${numPages} páginas. Qual página deseja usar? (1 a ${numPages})`, '1')
+  while (answer !== null) {
+    const n = Number(answer.trim())
+    if (Number.isInteger(n) && n >= 1 && n <= numPages) return n
+    answer = window.prompt(`Página inválida. Digite um número de 1 a ${numPages}:`, '1')
+  }
+  return null
+}
+
 export default function App() {
   const { theme, toggleTheme } = useTheme()
   const [state, setState] = useState<AppState>(initialState)
@@ -82,7 +96,18 @@ export default function App() {
   const projectInputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(slot: 'A' | 'B', file: File) {
-    const dataUrl = await readFileAsDataUrl(file)
+    let dataUrl: string | null
+    if (isPdfFile(file)) {
+      try {
+        dataUrl = await renderPdfPageToDataUrl(file, askPdfPage)
+      } catch {
+        window.alert('Não foi possível abrir esse PDF.')
+        return
+      }
+      if (!dataUrl) return
+    } else {
+      dataUrl = await readFileAsDataUrl(file)
+    }
     setState((prev) => ({
       ...prev,
       [slot === 'A' ? 'imageA' : 'imageB']: dataUrl,
@@ -261,8 +286,9 @@ export default function App() {
         return
       }
       setState(project.state)
-      setTransformA(project.transformA ?? DEFAULT_IMAGE_TRANSFORM)
-      setTransformB(project.transformB ?? DEFAULT_IMAGE_TRANSFORM)
+      // Mescla com o padrão para que edições salvas antes de um ajuste novo (ex: clarear) abram normalmente.
+      setTransformA({ ...DEFAULT_IMAGE_TRANSFORM, ...project.transformA })
+      setTransformB({ ...DEFAULT_IMAGE_TRANSFORM, ...project.transformB })
       setEditing(null)
     } catch {
       window.alert('Não foi possível abrir esse arquivo de edição.')
@@ -350,6 +376,49 @@ export default function App() {
         />
       )}
 
+      {/* Área fixa das lupas, acima dos quadros: fica sempre reservada (mesmo sem lupa aberta)
+          para que abrir/fechar a lupa não empurre os quadros para baixo durante a marcação. */}
+      {hasImages && (
+        <div className="flex items-center justify-center" style={{ height: MAGNIFIER_AREA_HEIGHT }}>
+          {editing && editingMinutia?.coordA && editingMinutia.coordB && state.imageA && state.imageB ? (
+            <div className="flex items-center gap-6 rounded-xl bg-white/95 p-4 shadow-2xl ring-1 ring-gray-200 backdrop-blur dark:bg-gray-800/95 dark:ring-gray-700">
+              <Magnifier
+                image={state.imageA}
+                point={editingMinutia.coordA}
+                label={editing.slot === 'A' ? 'Editando · Imagem A' : 'Referência · Imagem A'}
+                variant={editing.slot === 'A' ? 'editing' : 'reference'}
+                color={FRAME_COLOR.A}
+                rotation={transformA.rotation}
+                flipped={transformA.flipped}
+                inverted={transformA.inverted}
+                levelsBlack={transformA.levelsBlack}
+                darken={transformA.darken}
+                lighten={transformA.lighten}
+                zoom={transformA.zoom}
+              />
+              <Magnifier
+                image={state.imageB}
+                point={editingMinutia.coordB}
+                label={editing.slot === 'B' ? 'Editando · Imagem B' : 'Referência · Imagem B'}
+                variant={editing.slot === 'B' ? 'editing' : 'reference'}
+                color={FRAME_COLOR.B}
+                rotation={transformB.rotation}
+                flipped={transformB.flipped}
+                inverted={transformB.inverted}
+                levelsBlack={transformB.levelsBlack}
+                darken={transformB.darken}
+                lighten={transformB.lighten}
+                zoom={transformB.zoom}
+              />
+            </div>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 text-center text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500">
+              Lupas de precisão — aparecem aqui ao arrastar um ponto já marcado
+            </div>
+          )}
+        </div>
+      )}
+
       <div ref={captureRef} className="flex flex-col gap-4 bg-gray-50 p-2 md:flex-row dark:bg-gray-800/60">
         <ImagePanel
           ref={panelARef}
@@ -363,7 +432,7 @@ export default function App() {
           onTransformChange={setTransformA}
           otherImage={state.imageB}
           otherTransform={transformB}
-          canCreate={state.currentStep === 'WAITING_A'}
+          canCreate={state.currentStep === 'WAITING_A' && !arrowMode}
           onUpload={(file) => handleUpload('A', file)}
           onCreatePoint={handleCreatePointA}
           onMovePoint={(id, coord) => handleMovePoint('A', id, coord)}
@@ -383,7 +452,7 @@ export default function App() {
           onTransformChange={setTransformB}
           otherImage={state.imageA}
           otherTransform={transformA}
-          canCreate={state.currentStep === 'WAITING_B'}
+          canCreate={state.currentStep === 'WAITING_B' && !arrowMode}
           onUpload={(file) => handleUpload('B', file)}
           onCreatePoint={handleCreatePointB}
           onMovePoint={(id, coord) => handleMovePoint('B', id, coord)}
@@ -392,43 +461,6 @@ export default function App() {
           onEndEdit={handleEndEdit}
         />
       </div>
-
-      {editing && editingMinutia && editingMinutia.coordA && editingMinutia.coordB && state.imageA && state.imageB && (
-        <div className="flex justify-center">
-          <div className="flex items-center gap-6 rounded-xl bg-white/95 p-4 shadow-2xl ring-1 ring-gray-200 backdrop-blur dark:bg-gray-800/95 dark:ring-gray-700">
-            <Magnifier
-              image={state.imageA}
-              point={editingMinutia.coordA}
-              label={editing.slot === 'A' ? 'Editando · Imagem A' : 'Referência · Imagem A'}
-              variant={editing.slot === 'A' ? 'editing' : 'reference'}
-              rotation={transformA.rotation}
-              flipped={transformA.flipped}
-              inverted={transformA.inverted}
-              levelsBlack={transformA.levelsBlack}
-              darken={transformA.darken}
-            />
-            <Magnifier
-              image={state.imageB}
-              point={editingMinutia.coordB}
-              label={editing.slot === 'B' ? 'Editando · Imagem B' : 'Referência · Imagem B'}
-              variant={editing.slot === 'B' ? 'editing' : 'reference'}
-              rotation={transformB.rotation}
-              flipped={transformB.flipped}
-              inverted={transformB.inverted}
-              levelsBlack={transformB.levelsBlack}
-              darken={transformB.darken}
-            />
-          </div>
-        </div>
-      )}
-
-      <MinutiaeTable
-        minutiae={state.minutiae}
-        onChangeId={handleChangeId}
-        onReorder={handleReorder}
-        onDelete={handleDelete}
-        onToggleNumber={handleToggleNumber}
-      />
 
       <div className="flex flex-col gap-3 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:flex-row sm:items-center sm:flex-wrap">
         <button
@@ -451,12 +483,26 @@ export default function App() {
               ? 'bg-blue-600 text-white ring-blue-600'
               : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
           }`}
-          title="Com o modo linha ligado, arrastar um ponto move só o número (com uma linha até o ponto real)"
+          title="Com o modo linha ligado, arrastar um ponto move só o número (com uma linha até o ponto real). A marcação de pontos novos fica travada até desligar."
         >
           <MoveUpRight size={14} />
           Modo linha
         </button>
+
+        {arrowMode && (
+          <span className="text-xs text-amber-600 dark:text-amber-400">
+            Marcação de novos pontos travada — desligue o modo linha para marcar.
+          </span>
+        )}
       </div>
+
+      <MinutiaeTable
+        minutiae={state.minutiae}
+        onChangeId={handleChangeId}
+        onReorder={handleReorder}
+        onDelete={handleDelete}
+        onToggleNumber={handleToggleNumber}
+      />
     </div>
   )
 }

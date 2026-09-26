@@ -28,6 +28,7 @@ import {
   RotateCw,
   Sun,
   SunDim,
+  SunMedium,
   Upload,
   ZoomIn,
   ZoomOut,
@@ -57,10 +58,14 @@ interface ImagePanelProps {
 }
 
 const MIN_ZOOM = 0.5
-const MAX_ZOOM = 5
+// Alto o bastante para ampliar um dedo dentro de uma página inteira de prontuário
+// (A4 a 600 dpi) até o mesmo tamanho de uma imagem questionada já recortada.
+const MAX_ZOOM = 50
 const MIN_LEVEL = 0
 const MAX_LEVEL = 254
 const LEVEL_STEP = 15
+// Distância mínima (px) que o mouse precisa andar sobre um marcador para contar como arraste, e não clique.
+const DRAG_THRESHOLD_PX = 4
 
 // Botão de -/+ compartilhado por zoom, rotação, ponto preto e escurecer.
 const STEP_BTN_CLASS =
@@ -68,12 +73,13 @@ const STEP_BTN_CLASS =
 
 // Marcação padronizada do laudo — tamanhos e cores fixos, não editáveis pelo usuário.
 const MARKER_SIZE = 24 // px — diâmetro da bolinha do número
-const LINE_THICKNESS = 3 // px — peso da linha entre o número e o ponto real
-const ANCHOR_DOT_SIZE = LINE_THICKNESS * 3 // "bolinha da minúcia" — acompanha a espessura da linha, só um pouco maior
+const LINE_THICKNESS = 2.5 // px — peso da linha entre o número e o ponto real
+// "bolinha da minúcia" — miolo vermelho com o dobro da espessura da linha, mais 1px de borda branca de cada lado
+const ANCHOR_DOT_SIZE = LINE_THICKNESS * 2 + 2
 const NUMBER_COLOR = '#dc2626' // vermelho
 const DOT_COLOR = '#ffffff' // branco
 const ANCHOR_DOT_COLOR = '#dc2626'
-const FRAME_COLOR: Record<ImageSlot, string> = { A: '#dc2626', B: '#2563eb' }
+export const FRAME_COLOR: Record<ImageSlot, string> = { A: '#dc2626', B: '#2563eb' }
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -86,7 +92,7 @@ function wrapAngle(deg: number) {
 function buildFilter(t: ImageTransform): string | undefined {
   const parts: string[] = []
   if (t.inverted) parts.push('invert(1)')
-  parts.push(...buildLevelsFilterParts(t.levelsBlack, t.darken))
+  parts.push(...buildLevelsFilterParts(t.levelsBlack, t.darken, t.lighten))
   return parts.length ? parts.join(' ') : undefined
 }
 
@@ -120,13 +126,14 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     | null
   >(null)
   const draggingMinutiaId = useRef<number | null>(null)
+  const pendingClickRef = useRef<{ x: number; y: number } | null>(null)
 
   const [baseSize, setBaseSize] = useState({ width: 0, height: 0 })
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
   const [otherNatural, setOtherNatural] = useState<{ w: number; h: number } | null>(null)
   const [adjustMode, setAdjustMode] = useState(false)
   const [rotateDragMode, setRotateDragMode] = useState(false)
-  const [showGhost, setShowGhost] = useState(true)
+  const [showGhost, setShowGhost] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
 
   const recomputeBaseSize = useCallback(() => {
@@ -381,12 +388,26 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       // Pointer sintético/já liberado — o arraste ainda funciona via listeners no marcador.
     }
     draggingMinutiaId.current = id
-    onStartEdit(id)
+    // Enquanto esse lado espera um ponto novo, um clique em cima (ou perto) de um
+    // marcador existente precisa marcar o ponto novo — não abrir a edição do anterior.
+    // Por isso a edição só começa depois que o mouse realmente se move um pouco.
+    if (allowCreate && image) {
+      pendingClickRef.current = { x: e.clientX, y: e.clientY }
+    } else {
+      pendingClickRef.current = null
+      onStartEdit(id)
+    }
   }
 
   function handleMarkerPointerMove(e: PointerEvent<HTMLDivElement>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
+    const pending = pendingClickRef.current
+    if (pending) {
+      if (Math.hypot(e.clientX - pending.x, e.clientY - pending.y) < DRAG_THRESHOLD_PX) return
+      pendingClickRef.current = null
+      onStartEdit(draggingMinutiaId.current)
+    }
     const cursor = screenToPercent(e.clientX, e.clientY)
     if (!cursor) return
     if (arrowMode) {
@@ -409,6 +430,15 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
     draggingMinutiaId.current = null
+    if (pendingClickRef.current) {
+      // Foi um clique (sem arrastar): marca o ponto novo exatamente onde clicou.
+      pendingClickRef.current = null
+      if (e.type === 'pointerup') {
+        const coord = screenToPercent(e.clientX, e.clientY)
+        if (coord) onCreatePoint(coord)
+      }
+      return
+    }
     onEndEdit()
   }
 
@@ -454,7 +484,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf,.pdf"
           className="hidden"
           onChange={handleFileChange}
         />
@@ -666,6 +696,54 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               </button>
             </div>
 
+            {/* Clarear */}
+            <div
+              className="flex items-center gap-1 rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600"
+              title="Clarear: deixa a foto inteira mais clara por igual (sombras e claros juntos) — útil quando ela está escura demais"
+            >
+              <SunMedium size={14} className="text-gray-500 dark:text-gray-400" />
+              <span className="font-medium text-gray-500 dark:text-gray-400">Clarear</span>
+              <input
+                type="range"
+                min={MIN_LEVEL}
+                max={MAX_LEVEL}
+                value={transform.lighten}
+                onChange={(e) =>
+                  setTransform((t) => ({ ...t, lighten: clamp(Number(e.target.value), MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className="w-14"
+              />
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, lighten: clamp(t.lighten - LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Diminuir clarear"
+              >
+                <Minus size={14} />
+              </button>
+              <input
+                type="number"
+                value={transform.lighten}
+                onChange={(e) => {
+                  if (e.target.value === '') return
+                  const v = Number(e.target.value)
+                  if (Number.isNaN(v)) return
+                  setTransform((t) => ({ ...t, lighten: clamp(v, MIN_LEVEL, MAX_LEVEL) }))
+                }}
+                className="w-12 rounded border border-gray-300 bg-white px-1 py-0.5 text-center text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+              />
+              <button
+                onClick={() =>
+                  setTransform((t) => ({ ...t, lighten: clamp(t.lighten + LEVEL_STEP, MIN_LEVEL, MAX_LEVEL) }))
+                }
+                className={STEP_BTN_CLASS}
+                title="Aumentar clarear"
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+
             {/* Espelhar */}
             <div className="flex items-center rounded-md bg-white p-1 shadow-sm ring-1 ring-gray-300 dark:bg-gray-800 dark:ring-gray-600">
               <button
@@ -736,7 +814,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             className="flex h-full w-full flex-col items-center justify-center gap-2 text-gray-300 hover:text-gray-400 dark:text-gray-700 dark:hover:text-gray-600"
           >
             <Fingerprint size={96} strokeWidth={1} />
-            <span className="text-sm font-medium text-gray-400 dark:text-gray-600">Clique para carregar a imagem</span>
+            <span className="text-sm font-medium text-gray-400 dark:text-gray-600">Clique para carregar a imagem ou PDF</span>
           </button>
         )}
 
@@ -779,7 +857,10 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                     x2={coord.x + offset.x}
                     y2={coord.y + offset.y}
                     stroke={NUMBER_COLOR}
-                    strokeWidth={LINE_THICKNESS}
+                    // O non-scaling-stroke só neutraliza o esticamento do viewBox; o zoom
+                    // (scale do CSS no palco) ainda engrossaria a linha — por isso a divisão,
+                    // para ela ter a mesma espessura na tela nas duas imagens, com qualquer zoom.
+                    strokeWidth={LINE_THICKNESS / transform.zoom}
                     vectorEffect="non-scaling-stroke"
                   />
                 )

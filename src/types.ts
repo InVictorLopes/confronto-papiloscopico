@@ -48,6 +48,8 @@ export interface ImageTransform {
   // (escurece tudo de forma uniforme, útil quando a foto inteira está clara demais).
   levelsBlack: number
   darken: number
+  // Clarear (0-254): o inverso do darken — multiplica a imagem inteira por um fator >1.
+  lighten: number
 }
 
 export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
@@ -59,4 +61,5 @@ export const DEFAULT_IMAGE_TRANSFORM: ImageTransform = {
   inverted: false,
   levelsBlack: 0,
   darken: 0,
+  lighten: 0,
 }
