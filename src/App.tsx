@@ -4,6 +4,7 @@ import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-re
 import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
 import ImagePanel, { FRAME_COLOR, SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
+import ComparisonTabs, { type ComparisonTabMeta } from './components/ComparisonTabs'
 import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import Magnifier from './components/Magnifier'
@@ -56,6 +57,32 @@ const initialState: AppState = {
   cropB: null,
 }
 
+// Tudo o que compõe "o trabalho" de uma aba — o que fica guardado quando ela não está
+// ativa, pra poder trocar de aba sem perder nada em nenhuma delas (ver switchTab em App).
+interface TabSnapshot {
+  state: AppState
+  transformA: ImageTransform
+  transformB: ImageTransform
+  showNumbers: boolean
+  arrowMode: boolean
+}
+
+function makeInitialSnapshot(): TabSnapshot {
+  return {
+    state: initialState,
+    transformA: DEFAULT_IMAGE_TRANSFORM,
+    transformB: DEFAULT_IMAGE_TRANSFORM,
+    showNumbers: true,
+    arrowMode: false,
+  }
+}
+
+let tabIdCounter = 0
+function makeTabId() {
+  tabIdCounter += 1
+  return `tab-${Date.now()}-${tabIdCounter}`
+}
+
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -100,6 +127,77 @@ export default function App() {
   const [adjustA, setAdjustA] = useState(false)
   const [adjustB, setAdjustB] = useState(false)
   const [sidebarOutside, setSidebarOutside] = useState(false)
+
+  // Abas estilo Excel: cada uma é um confronto independente. Só a aba ATIVA vive nos
+  // hooks acima (state/transformA/transformB/showNumbers/arrowMode) — as outras ficam
+  // "estacionadas" aqui (fora de state pra não re-renderizar por causa delas) e voltam a
+  // viver nesses hooks quando a pessoa clica de volta nelas (ver switchTab).
+  const [tabs, setTabs] = useState<ComparisonTabMeta[]>(() => [{ id: makeTabId(), name: 'Confronto 1' }])
+  const [activeTabId, setActiveTabId] = useState<string>(() => tabs[0].id)
+  const parkedTabs = useRef<Record<string, TabSnapshot>>({})
+
+  // Mesma lógica do nextAvailableId (pontos): usa o menor número ainda livre, preenchendo
+  // a lacuna deixada por uma aba excluída, em vez de só ir sempre pra frente — excluir as
+  // abas 9 e 10 e criar uma nova dá "Confronto 9" de novo, não "Confronto 11".
+  function nextDefaultTabName(): string {
+    const used = new Set(
+      tabs
+        .map((t) => /^Confronto (\d+)$/.exec(t.name))
+        .filter((m): m is RegExpExecArray => m !== null)
+        .map((m) => Number(m[1])),
+    )
+    let n = 1
+    while (used.has(n)) n++
+    return `Confronto ${n}`
+  }
+
+  function loadSnapshot(snap: TabSnapshot) {
+    setState(snap.state)
+    setTransformA(snap.transformA)
+    setTransformB(snap.transformB)
+    setShowNumbers(snap.showNumbers)
+    setArrowMode(snap.arrowMode)
+    setEditing(null)
+    setAdjustA(false)
+    setAdjustB(false)
+  }
+
+  function switchTab(id: string) {
+    if (id === activeTabId) return
+    parkedTabs.current[activeTabId] = { state, transformA, transformB, showNumbers, arrowMode }
+    loadSnapshot(parkedTabs.current[id] ?? makeInitialSnapshot())
+    setActiveTabId(id)
+  }
+
+  function addTab() {
+    parkedTabs.current[activeTabId] = { state, transformA, transformB, showNumbers, arrowMode }
+    const id = makeTabId()
+    const name = nextDefaultTabName()
+    setTabs((prev) => [...prev, { id, name }])
+    loadSnapshot(makeInitialSnapshot())
+    setActiveTabId(id)
+  }
+
+  function renameTab(id: string, name: string) {
+    const trimmed = name.trim()
+    if (!trimmed) return
+    setTabs((prev) => prev.map((t) => (t.id === id ? { ...t, name: trimmed } : t)))
+  }
+
+  function closeTab(id: string) {
+    if (tabs.length <= 1) return
+    const idx = tabs.findIndex((t) => t.id === id)
+    if (idx === -1) return
+    if (!window.confirm(`Fechar a aba "${tabs[idx].name}"? O trabalho feito nela será perdido.`)) return
+    delete parkedTabs.current[id]
+    const next = tabs.filter((t) => t.id !== id)
+    setTabs(next)
+    if (id === activeTabId) {
+      const newActive = next[Math.max(0, idx - 1)]
+      loadSnapshot(parkedTabs.current[newActive.id] ?? makeInitialSnapshot())
+      setActiveTabId(newActive.id)
+    }
+  }
 
   // A barra de ajuste só vai para o espaço vazio das laterais da página quando ela cabe
   // ali inteira; senão ela ocupa uma coluna ao lado do quadro (e os quadros encolhem).
@@ -396,6 +494,15 @@ export default function App() {
           {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
         </button>
       </header>
+
+      <ComparisonTabs
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSwitch={switchTab}
+        onAdd={addTab}
+        onRename={renameTab}
+        onClose={closeTab}
+      />
 
       <ControlPanel
         currentStep={state.currentStep}

@@ -679,6 +679,19 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     setFreehandPoints([])
   }
 
+  // "Concluir ajuste" enquanto uma seleção de recorte ainda está aberta (sem ter clicado em
+  // "Aplicar recorte") precisa decidir por ela — senão o quadro de recorte fica aparecendo
+  // sozinho por cima da imagem depois que a barra de ajuste já sumiu. Aplica se dá pra
+  // aplicar (já tem uma seleção válida); senão só cancela o recorte em aberto.
+  function finishAdjust() {
+    if (cropMode) {
+      const canApply = cropShape === 'free' ? freehandPoints.length >= 3 : !!cropRect
+      if (canApply) applyCrop()
+      else cancelCrop()
+    }
+    setAdjustMode(false)
+  }
+
   // Centro da imagem na tela (mesmo pivô usado pelo giro), considerando o pan atual.
   function screenCenter() {
     const viewportRect = viewportRef.current!.getBoundingClientRect()
@@ -823,7 +836,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         <div className="flex items-center gap-1">
           {image && (
             <button
-              onClick={() => setAdjustMode(!adjustMode)}
+              onClick={() => (adjustMode ? finishAdjust() : setAdjustMode(true))}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
                 adjustMode
                   ? 'bg-blue-600 text-white ring-blue-600'
@@ -1255,7 +1268,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
           <span className="text-gray-400 dark:text-gray-500">Arraste a imagem para mover</span>
 
           <button
-            onClick={() => setAdjustMode(false)}
+            onClick={finishAdjust}
             className="flex w-full items-center justify-center gap-1 rounded-md bg-blue-600 px-2 py-1.5 font-medium text-white shadow-sm hover:bg-blue-700"
           >
             <Check size={14} />
