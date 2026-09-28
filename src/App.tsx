@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
 import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
-import type { AppState, Coordinate, ImageSlot, ImageTransform, ProjectFile } from './types'
+import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
 import ImagePanel, { FRAME_COLOR, SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
 import ControlPanel from './components/ControlPanel'
@@ -52,6 +52,8 @@ const initialState: AppState = {
   imageB: null,
   minutiae: [],
   currentStep: 'WAITING_A',
+  cropA: null,
+  cropB: null,
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -144,9 +146,21 @@ export default function App() {
       // à imagem anterior), então os pontos somem e a marcação recomeça do zero.
       minutiae: [],
       currentStep: 'WAITING_A',
+      [slot === 'A' ? 'cropA' : 'cropB']: null,
     }))
     if (slot === 'A') setTransformA(DEFAULT_IMAGE_TRANSFORM)
     else setTransformB(DEFAULT_IMAGE_TRANSFORM)
+  }
+
+  // Recorte não-destrutivo: só grava a máscara (contorno em % da imagem original).
+  // A imagem em si nunca é alterada, os pontos marcados nunca mudam de posição, e
+  // reabrir o recorte ou reverter ele (handleRevertCrop) não perde nenhum pixel.
+  function handleApplyCrop(slot: ImageSlot, mask: CropMask) {
+    setState((prev) => ({ ...prev, [slot === 'A' ? 'cropA' : 'cropB']: mask }))
+  }
+
+  function handleRevertCrop(slot: ImageSlot) {
+    setState((prev) => ({ ...prev, [slot === 'A' ? 'cropA' : 'cropB']: null }))
   }
 
   function handleCreatePointA(coord: Coordinate) {
@@ -335,7 +349,9 @@ export default function App() {
         window.alert('Arquivo de edição inválido.')
         return
       }
-      setState(project.state)
+      // Edições salvas antes do recorte não-destrutivo existir não têm cropA/cropB no JSON
+      // (undefined em tempo de execução, apesar do tipo) — abrem normalmente, sem recorte.
+      setState({ ...project.state, cropA: project.state.cropA ?? null, cropB: project.state.cropB ?? null })
       // Mescla com o padrão para que edições salvas antes de um ajuste novo (ex: clarear) abram normalmente.
       setTransformA({ ...DEFAULT_IMAGE_TRANSFORM, ...project.transformA })
       setTransformB({ ...DEFAULT_IMAGE_TRANSFORM, ...project.transformB })
@@ -483,8 +499,12 @@ export default function App() {
           onTransformChange={setTransformA}
           otherImage={state.imageB}
           otherTransform={transformB}
+          cropMask={state.cropA}
+          otherCropMask={state.cropB}
           canCreate={state.currentStep === 'WAITING_A' && !arrowMode}
           onUpload={(file) => handleUpload('A', file)}
+          onApplyCrop={(mask) => handleApplyCrop('A', mask)}
+          onRevertCrop={() => handleRevertCrop('A')}
           onCreatePoint={handleCreatePointA}
           onMovePoint={(id, coord) => handleMovePoint('A', id, coord)}
           onMoveLabel={(id, offset) => handleMoveLabel('A', id, offset)}
@@ -507,8 +527,12 @@ export default function App() {
           onTransformChange={setTransformB}
           otherImage={state.imageA}
           otherTransform={transformA}
+          cropMask={state.cropB}
+          otherCropMask={state.cropA}
           canCreate={state.currentStep === 'WAITING_B' && !arrowMode}
           onUpload={(file) => handleUpload('B', file)}
+          onApplyCrop={(mask) => handleApplyCrop('B', mask)}
+          onRevertCrop={() => handleRevertCrop('B')}
           onCreatePoint={handleCreatePointB}
           onMovePoint={(id, coord) => handleMovePoint('B', id, coord)}
           onMoveLabel={(id, offset) => handleMoveLabel('B', id, offset)}

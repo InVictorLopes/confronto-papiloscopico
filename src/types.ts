@@ -30,11 +30,21 @@ export function displayId(id: number) {
 
 export type ComparisonStep = 'WAITING_A' | 'WAITING_B'
 
+// Recorte não-destrutivo: só uma máscara (contorno em % da imagem ORIGINAL, nunca
+// alterada) — a imagem enviada nunca é recortada de verdade, então reabrir o recorte
+// ou reverter ele não perde nenhum pixel, e os pontos marcados (em % da mesma imagem
+// original) nunca precisam ser recalculados.
+export interface CropMask {
+  points: Coordinate[]
+}
+
 export interface AppState {
   imageA: string | null // URL do Blob/Base64
   imageB: string | null
   minutiae: Minutia[]
   currentStep: ComparisonStep
+  cropA: CropMask | null
+  cropB: CropMask | null
 }
 
 // Formato do arquivo de "edição salva" (JSON), para reabrir e corrigir depois.
