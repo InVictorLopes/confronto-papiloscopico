@@ -88,6 +88,14 @@ const MAX_ZOOM = 50
 const MIN_LEVEL = 0
 const MAX_LEVEL = 254
 const LEVEL_STEP = 15
+// Parte do marcador que foi pega para arrastar: o número (comportamento de sempre), a
+// bolinha da minúcia (move só o ponto real) ou a linha (move ponto e número juntos).
+type MarkerPart = 'label' | 'anchor' | 'line'
+// Área de toque da bolinha da minúcia e da linha (px na tela) — bem maior que o desenho,
+// que é fino demais para acertar com o dedo ou o mouse.
+const ANCHOR_HIT_SIZE = 20
+const LINE_HIT_THICKNESS = 14
+
 // Distância mínima (px) que o mouse precisa andar sobre um marcador para contar como arraste, e não clique.
 const DRAG_THRESHOLD_PX = 4
 // Tamanho mínimo (px, na tela) da seleção de recorte.
@@ -178,6 +186,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   >(null)
   const draggingMinutiaId = useRef<number | null>(null)
   const pendingClickRef = useRef<{ x: number; y: number } | null>(null)
+  // Qual parte do marcador está sendo arrastada, e onde tudo estava no início do arraste.
+  const dragPartRef = useRef<{
+    part: MarkerPart
+    startCursor: Coordinate
+    startCoord: Coordinate
+    startOffset: Coordinate
+  } | null>(null)
   const cropDragRef = useRef<
     | { mode: 'move'; startX: number; startY: number; startRect: CropRect }
     | { mode: 'resize'; handle: CropHandle; startRect: CropRect }
@@ -404,8 +419,9 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     return `polygon(${mask.points.map((p) => `${p.x}% ${p.y}%`).join(', ')})`
   }
 
-  const screenToPercent = useCallback(
-    (clientX: number, clientY: number): Coordinate | null => {
+  // Limites (em % da imagem) dentro dos quais um ponto ou número pode ficar sem sair do quadro.
+  const frameBounds = useCallback(
+    (): { minX: number; maxX: number; minY: number; maxY: number } | null => {
       if (!viewportRef.current || baseSize.width === 0) return null
       const viewportRect = viewportRef.current.getBoundingClientRect()
 
@@ -445,10 +461,19 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         minY = maxY = mid
       }
 
-      const { x: percentX, y: percentY } = toPercentUnclamped(clientX, clientY)
-      return { x: clamp(percentX, minX, maxX), y: clamp(percentY, minY, maxY) }
+      return { minX, maxX, minY, maxY }
     },
     [baseSize, toPercentUnclamped, transform.zoom],
+  )
+
+  const screenToPercent = useCallback(
+    (clientX: number, clientY: number): Coordinate | null => {
+      const bounds = frameBounds()
+      if (!bounds) return null
+      const { x: percentX, y: percentY } = toPercentUnclamped(clientX, clientY)
+      return { x: clamp(percentX, bounds.minX, bounds.maxX), y: clamp(percentY, bounds.minY, bounds.maxY) }
+    },
+    [frameBounds, toPercentUnclamped],
   )
 
   function handleMarkClick(e: MouseEvent<HTMLDivElement>) {
@@ -752,16 +777,21 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     setIsDragging(false)
   }
 
-  function handleMarkerPointerDown(e: PointerEvent<HTMLDivElement>, id: number) {
+  function handleMarkerPointerDown(e: PointerEvent<Element>, id: number, part: MarkerPart = 'label') {
     if (adjustMode) return
     e.stopPropagation()
     e.preventDefault()
     try {
-      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      e.currentTarget.setPointerCapture(e.pointerId)
     } catch {
       // Pointer sintético/já liberado — o arraste ainda funciona via listeners no marcador.
     }
     draggingMinutiaId.current = id
+    const m = minutiae.find((mm) => mm.id === id)
+    const coord = m?.[coordKey]
+    const offset = m?.[offsetKey] ?? { x: 0, y: 0 }
+    const startCursor = toPercentUnclamped(e.clientX, e.clientY)
+    dragPartRef.current = coord ? { part, startCursor, startCoord: coord, startOffset: offset } : null
     // Enquanto esse lado espera um ponto novo, um clique em cima (ou perto) de um
     // marcador existente precisa marcar o ponto novo — não abrir a edição do anterior.
     // Por isso a edição só começa depois que o mouse realmente se move um pouco.
@@ -773,7 +803,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     }
   }
 
-  function handleMarkerPointerMove(e: PointerEvent<HTMLDivElement>) {
+  function handleMarkerPointerMove(e: PointerEvent<Element>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
     const pending = pendingClickRef.current
@@ -784,6 +814,44 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     }
     const cursor = screenToPercent(e.clientX, e.clientY)
     if (!cursor) return
+    const drag = dragPartRef.current
+    if (drag?.part === 'anchor') {
+      // Bolinha da minúcia: move só o ponto real; o número fica parado onde está
+      // (o deslocamento do número é recalculado para ele não sair do lugar).
+      // Segue o arraste a partir de onde a bolinha foi pega (a área de toque é maior que
+      // ela), em vez de pular o ponto para baixo do cursor.
+      const bounds = frameBounds()
+      if (!bounds) return
+      const now = toPercentUnclamped(e.clientX, e.clientY)
+      const point = {
+        x: clamp(drag.startCoord.x + now.x - drag.startCursor.x, bounds.minX, bounds.maxX),
+        y: clamp(drag.startCoord.y + now.y - drag.startCursor.y, bounds.minY, bounds.maxY),
+      }
+      const labelX = drag.startCoord.x + drag.startOffset.x
+      const labelY = drag.startCoord.y + drag.startOffset.y
+      onMovePoint(draggingMinutiaId.current, point)
+      onMoveLabel(draggingMinutiaId.current, { x: labelX - point.x, y: labelY - point.y })
+      return
+    }
+    if (drag?.part === 'line') {
+      // Linha: move o conjunto todo (ponto + número), sem deixar nenhum dos dois sair do quadro.
+      const bounds = frameBounds()
+      if (!bounds) return
+      const now = toPercentUnclamped(e.clientX, e.clientY)
+      const { startCoord: c, startOffset: o } = drag
+      const dx = clamp(
+        now.x - drag.startCursor.x,
+        Math.max(bounds.minX - c.x, bounds.minX - (c.x + o.x)),
+        Math.min(bounds.maxX - c.x, bounds.maxX - (c.x + o.x)),
+      )
+      const dy = clamp(
+        now.y - drag.startCursor.y,
+        Math.max(bounds.minY - c.y, bounds.minY - (c.y + o.y)),
+        Math.min(bounds.maxY - c.y, bounds.maxY - (c.y + o.y)),
+      )
+      onMovePoint(draggingMinutiaId.current, { x: c.x + dx, y: c.y + dy })
+      return
+    }
     if (arrowMode) {
       const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
       const point = m?.[coordKey]
@@ -800,10 +868,11 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     }
   }
 
-  function handleMarkerPointerUp(e: PointerEvent<HTMLDivElement>) {
+  function handleMarkerPointerUp(e: PointerEvent<Element>) {
     if (draggingMinutiaId.current === null) return
     e.stopPropagation()
     draggingMinutiaId.current = null
+    dragPartRef.current = null
     if (pendingClickRef.current) {
       // Foi um clique (sem arrastar): marca o ponto novo exatamente onde clicou.
       pendingClickRef.current = null
@@ -1308,7 +1377,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         {image && (
           <div
             className="absolute"
-            // A exportação não entende clip-path; ela lê esta marcação para recortar a imagem de verdade (ver cropExport.ts).
+            // A exportação não entende o clip-path da imagem; ela lê esta marcação para recortá-la de verdade (ver cropExport.ts).
             data-crop-mask={!cropMode && buildClipPath(cropMask) ? JSON.stringify(cropMask!.points) : undefined}
             style={{
               left: `calc(50% - ${baseSize.width / 2}px)`,
@@ -1317,9 +1386,6 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               height: baseSize.height,
               transform: `translate(${panXpx}px, ${panYpx}px) rotate(${transform.rotation}deg) scale(${transform.zoom}) scaleX(${transform.flipped ? -1 : 1})`,
               transformOrigin: 'center center',
-              // Em modo de recorte, a imagem original inteira precisa aparecer (inclusive a
-              // parte já recortada antes), pra poder reincluí-la — por isso o clip fica suspenso.
-              clipPath: cropMode ? undefined : buildClipPath(cropMask),
             }}
           >
             <img
@@ -1329,7 +1395,15 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               draggable={false}
               onLoad={handleImgLoad}
               className="block h-full w-full select-none pointer-events-none"
-              style={{ filter: buildFilter(transform) }}
+              style={{
+                filter: buildFilter(transform),
+                // O recorte vai só na imagem (que ocupa o palco inteiro, então as % são as
+                // mesmas) — não no palco, senão ele também esconderia os pontos, linhas e
+                // números arrastados para a área recortada, sem como pegá-los de volta.
+                // Em modo de recorte, a imagem original inteira precisa aparecer (inclusive a
+                // parte já recortada antes), pra poder reincluí-la — por isso o clip fica suspenso.
+                clipPath: cropMode ? undefined : buildClipPath(cropMask),
+              }}
             />
 
             <svg
@@ -1342,19 +1416,40 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 const offset = m[offsetKey]
                 if (!coord || (offset.x === 0 && offset.y === 0)) return null
                 return (
-                  <line
-                    key={m.id}
-                    x1={coord.x}
-                    y1={coord.y}
-                    x2={coord.x + offset.x}
-                    y2={coord.y + offset.y}
-                    stroke={NUMBER_COLOR}
-                    // O non-scaling-stroke só neutraliza o esticamento do viewBox; o zoom
-                    // (scale do CSS no palco) ainda engrossaria a linha — por isso a divisão,
-                    // para ela ter a mesma espessura na tela nas duas imagens, com qualquer zoom.
-                    strokeWidth={LINE_THICKNESS / transform.zoom}
-                    vectorEffect="non-scaling-stroke"
-                  />
+                  <g key={m.id}>
+                    <line
+                      x1={coord.x}
+                      y1={coord.y}
+                      x2={coord.x + offset.x}
+                      y2={coord.y + offset.y}
+                      stroke={NUMBER_COLOR}
+                      // O non-scaling-stroke só neutraliza o esticamento do viewBox; o zoom
+                      // (scale do CSS no palco) ainda engrossaria a linha — por isso a divisão,
+                      // para ela ter a mesma espessura na tela nas duas imagens, com qualquer zoom.
+                      strokeWidth={LINE_THICKNESS / transform.zoom}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    {/* Área de toque invisível e mais grossa por cima da linha, para arrastá-la. */}
+                    <line
+                      x1={coord.x}
+                      y1={coord.y}
+                      x2={coord.x + offset.x}
+                      y2={coord.y + offset.y}
+                      stroke="transparent"
+                      strokeWidth={LINE_HIT_THICKNESS / transform.zoom}
+                      vectorEffect="non-scaling-stroke"
+                      onPointerDown={(e) => handleMarkerPointerDown(e, m.id, 'line')}
+                      onPointerMove={handleMarkerPointerMove}
+                      onPointerUp={handleMarkerPointerUp}
+                      onPointerCancel={handleMarkerPointerUp}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        pointerEvents: adjustMode ? 'none' : 'stroke',
+                        cursor: 'move',
+                        touchAction: 'none',
+                      }}
+                    />
+                  </g>
                 )
               })}
             </svg>
@@ -1373,18 +1468,35 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 <div key={m.id}>
                   {hasOffset && (
                     <div
-                      className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2"
-                      style={{ left: `${coord.x}%`, top: `${coord.y}%` }}
+                      onPointerDown={(e) => handleMarkerPointerDown(e, m.id, 'anchor')}
+                      onPointerMove={handleMarkerPointerMove}
+                      onPointerUp={handleMarkerPointerUp}
+                      onPointerCancel={handleMarkerPointerUp}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      style={{
+                        left: `${coord.x}%`,
+                        top: `${coord.y}%`,
+                        cursor: adjustMode ? cursor : 'move',
+                        touchAction: 'none',
+                      }}
                     >
                       <div style={{ transform: counterTransform }}>
+                        {/* Área de toque maior que a bolinha, centrada nela. */}
                         <div
-                          className="rounded-full border border-white shadow"
-                          style={{
-                            width: ANCHOR_DOT_SIZE,
-                            height: ANCHOR_DOT_SIZE,
-                            backgroundColor: ANCHOR_DOT_COLOR,
-                          }}
-                        />
+                          className="flex items-center justify-center"
+                          style={{ width: ANCHOR_HIT_SIZE, height: ANCHOR_HIT_SIZE }}
+                          title={`Minúcia do ponto ${displayId(m.id)} — arraste para mover só o ponto`}
+                        >
+                          <div
+                            className="rounded-full border border-white shadow"
+                            style={{
+                              width: ANCHOR_DOT_SIZE,
+                              height: ANCHOR_DOT_SIZE,
+                              backgroundColor: ANCHOR_DOT_COLOR,
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}

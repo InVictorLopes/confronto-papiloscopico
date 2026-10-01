@@ -71,7 +71,7 @@ export async function applyCropMasksForExport(doc: Document): Promise<string[]> 
       if (!img) return
       const points = JSON.parse(stage.dataset.cropMask!) as Coordinate[]
       const masked = await buildMaskedImage(img.src, points)
-      stage.style.clipPath = ''
+      img.style.clipPath = ''
       if (!masked) {
         img.style.visibility = 'hidden'
         return
