@@ -1308,6 +1308,8 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         {image && (
           <div
             className="absolute"
+            // A exportação não entende clip-path; ela lê esta marcação para recortar a imagem de verdade (ver cropExport.ts).
+            data-crop-mask={!cropMode && buildClipPath(cropMask) ? JSON.stringify(cropMask!.points) : undefined}
             style={{
               left: `calc(50% - ${baseSize.width / 2}px)`,
               top: `calc(50% - ${baseSize.height / 2}px)`,

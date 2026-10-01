@@ -12,6 +12,7 @@ import ExportDialog from './components/ExportDialog'
 import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
 import { useTheme } from './useTheme'
 import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
+import { applyCropMasksForExport } from './cropExport'
 
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
 // Altura reservada para as lupas: lupa (205) + rótulo + espaçamentos do cartão.
@@ -395,6 +396,11 @@ export default function App() {
   async function performExport(selections: ExportSelection[]) {
     setShowExportDialog(false)
     setExporting(true)
+    // URLs temporárias das imagens já recortadas (ver cropExport.ts), liberadas no fim.
+    const tempUrls: string[] = []
+    const onclone = async (doc: Document) => {
+      tempUrls.push(...(await applyCropMasksForExport(doc)))
+    }
     try {
       for (const { kind, filename } of selections) {
         const safeName = sanitizeFilename(filename)
@@ -404,19 +410,21 @@ export default function App() {
             useCORS: true,
             scale: 2,
             windowWidth: 1400,
+            onclone,
           })
           downloadCanvas(combined, `${safeName}.jpg`)
         } else if (kind === 'questionada' && panelARef.current) {
-          const canvasA = await html2canvas(panelARef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+          const canvasA = await html2canvas(panelARef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2, onclone })
           downloadCanvas(canvasA, `${safeName}.jpg`)
         } else if (kind === 'padrao' && panelBRef.current) {
-          const canvasB = await html2canvas(panelBRef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2 })
+          const canvasB = await html2canvas(panelBRef.current, { backgroundColor: '#ffffff', useCORS: true, scale: 2, onclone })
           downloadCanvas(canvasB, `${safeName}.jpg`)
         } else if (kind === 'edicao') {
           downloadProjectFile(`${safeName}.json`)
         }
       }
     } finally {
+      tempUrls.forEach((url) => URL.revokeObjectURL(url))
       setExporting(false)
     }
   }
