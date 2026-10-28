@@ -3,11 +3,10 @@ import html2canvas from 'html2canvas-pro'
 import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
-import ImagePanel, { FRAME_COLOR, SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
+import ImagePanel, { SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
 import ComparisonTabs, { type ComparisonTabMeta } from './components/ComparisonTabs'
 import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
-import Magnifier from './components/Magnifier'
 import ExportDialog from './components/ExportDialog'
 import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
 import { useTheme } from './useTheme'
@@ -15,8 +14,6 @@ import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
 import { applyCropMasksForExport } from './cropExport'
 
 const MANUAL_URL = `${import.meta.env.BASE_URL}manual.html`
-// Altura reservada para as lupas: lupa (205) + rótulo + espaçamentos do cartão.
-const MAGNIFIER_AREA_HEIGHT = 265
 // Padding (p-2) da área dos quadros, entre a borda dela e o quadro.
 const CAPTURE_PADDING = 8
 // Folga mínima entre a barra de ajuste e a borda da janela.
@@ -473,12 +470,23 @@ export default function App() {
   const editingMinutia = editing ? state.minutiae.find((m) => m.id === editing.id) ?? null : null
   const defaultExportName = buildDefaultExportName()
 
+  // Lupa flutuante de cada quadro enquanto um ponto é arrastado: 'editing' no lado arrastado e
+  // 'reference' no outro, cada uma no ponto da própria imagem (se ele já existir ali).
+  function magnifierFor(slot: ImageSlot) {
+    if (!editing || !editingMinutia) return null
+    const point = slot === 'A' ? editingMinutia.coordA : editingMinutia.coordB
+    if (!point) return null
+    return { variant: editing.slot === slot ? ('editing' as const) : ('reference' as const), point }
+  }
+
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex min-h-screen max-w-[1900px] flex-col gap-4 p-4">
       <header className="flex items-center gap-2">
         <Fingerprint className="text-blue-600" size={28} />
         <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">Confronto Papiloscópico</h1>
+          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
+            MAIA <span className="font-medium text-gray-500 dark:text-gray-400">— Módulo de Análise e Identificação Aplicada</span>
+          </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Processamento 100% local — nenhuma imagem é enviada a servidores
           </p>
@@ -558,49 +566,6 @@ export default function App() {
         />
       )}
 
-      {/* Área fixa das lupas, acima dos quadros: fica sempre reservada (mesmo sem lupa aberta)
-          para que abrir/fechar a lupa não empurre os quadros para baixo durante a marcação. */}
-      {hasImages && (
-        <div className="flex items-center justify-center" style={{ height: MAGNIFIER_AREA_HEIGHT }}>
-          {editing && editingMinutia?.coordA && editingMinutia.coordB && state.imageA && state.imageB ? (
-            <div className="flex items-center gap-6 rounded-xl bg-white/95 p-4 shadow-2xl ring-1 ring-gray-200 backdrop-blur dark:bg-gray-800/95 dark:ring-gray-700">
-              <Magnifier
-                image={state.imageA}
-                point={editingMinutia.coordA}
-                label={editing.slot === 'A' ? 'Editando · Imagem A' : 'Referência · Imagem A'}
-                variant={editing.slot === 'A' ? 'editing' : 'reference'}
-                color={FRAME_COLOR.A}
-                rotation={transformA.rotation}
-                flipped={transformA.flipped}
-                inverted={transformA.inverted}
-                levelsBlack={transformA.levelsBlack}
-                darken={transformA.darken}
-                lighten={transformA.lighten}
-                zoom={transformA.zoom}
-              />
-              <Magnifier
-                image={state.imageB}
-                point={editingMinutia.coordB}
-                label={editing.slot === 'B' ? 'Editando · Imagem B' : 'Referência · Imagem B'}
-                variant={editing.slot === 'B' ? 'editing' : 'reference'}
-                color={FRAME_COLOR.B}
-                rotation={transformB.rotation}
-                flipped={transformB.flipped}
-                inverted={transformB.inverted}
-                levelsBlack={transformB.levelsBlack}
-                darken={transformB.darken}
-                lighten={transformB.lighten}
-                zoom={transformB.zoom}
-              />
-            </div>
-          ) : (
-            <div className="flex h-full w-full items-center justify-center rounded-xl border-2 border-dashed border-gray-200 text-center text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500">
-              Lupas de precisão — aparecem aqui ao arrastar um ponto já marcado
-            </div>
-          )}
-        </div>
-      )}
-
       <div ref={captureRef} className="flex flex-col gap-4 bg-gray-50 p-2 md:flex-row dark:bg-gray-800/60">
         <ImagePanel
           ref={panelARef}
@@ -616,6 +581,7 @@ export default function App() {
           otherTransform={transformB}
           cropMask={state.cropA}
           otherCropMask={state.cropB}
+          magnifier={magnifierFor('A')}
           canCreate={state.currentStep === 'WAITING_A' && !arrowMode}
           onUpload={(file) => handleUpload('A', file)}
           onApplyCrop={(mask) => handleApplyCrop('A', mask)}
@@ -644,6 +610,7 @@ export default function App() {
           otherTransform={transformA}
           cropMask={state.cropB}
           otherCropMask={state.cropA}
+          magnifier={magnifierFor('B')}
           canCreate={state.currentStep === 'WAITING_B' && !arrowMode}
           onUpload={(file) => handleUpload('B', file)}
           onApplyCrop={(mask) => handleApplyCrop('B', mask)}

@@ -41,6 +41,7 @@ import {
 import type { Coordinate, CropMask, ImageSlot, ImageTransform, Minutia } from '../types'
 import { DEFAULT_IMAGE_TRANSFORM, displayId } from '../types'
 import { buildLevelsFilterParts } from '../levels'
+import Magnifier, { MAGNIFIER_HEIGHT, MAGNIFIER_SIZE } from './Magnifier'
 
 interface ImagePanelProps {
   slot: ImageSlot
@@ -57,6 +58,9 @@ interface ImagePanelProps {
   // do outro lado (pro molde fantasma refletir o que realmente aparece lá).
   cropMask: CropMask | null
   otherCropMask: CropMask | null
+  // Lupa flutuante sobre o quadro enquanto um ponto está sendo arrastado: 'editing' no lado
+  // arrastado e 'reference' no outro, cada uma centrada no ponto daquela imagem.
+  magnifier: { variant: 'editing' | 'reference'; point: Coordinate } | null
   canCreate: boolean
   onUpload: (file: File) => void
   onApplyCrop: (mask: CropMask) => void
@@ -91,10 +95,18 @@ const LEVEL_STEP = 15
 // Parte do marcador que foi pega para arrastar: o número (comportamento de sempre), a
 // bolinha da minúcia (move só o ponto real) ou a linha (move ponto e número juntos).
 type MarkerPart = 'label' | 'anchor' | 'line'
-// Área de toque da bolinha da minúcia e da linha (px na tela) — bem maior que o desenho,
-// que é fino demais para acertar com o dedo ou o mouse.
-const ANCHOR_HIT_SIZE = 20
-const LINE_HIT_THICKNESS = 14
+// Área de toque da bolinha da minúcia e da linha (px na tela): só um pouco maior que o
+// desenho, para não "roubar" cliques de quem está marcando um ponto bem ao lado.
+const ANCHOR_HIT_SIZE = 11
+const LINE_HIT_THICKNESS = 8
+// Espessura da borda do quadro (border-4) e folgas (px) entre a borda e os marcadores.
+const FRAME_BORDER = 4
+// O número fica sempre dentro do quadro, a esta distância da borda (além do próprio raio).
+const LABEL_EDGE_GAP = 8
+// A bolinha da minúcia pode chegar bem perto da borda.
+const POINT_EDGE_INSET = 4
+// Distância (px) entre o ponto e a lupa flutuante.
+const MAGNIFIER_GAP = 28
 
 // Distância mínima (px) que o mouse precisa andar sobre um marcador para contar como arraste, e não clique.
 const DRAG_THRESHOLD_PX = 4
@@ -125,12 +137,109 @@ const STEP_BTN_CLASS =
 // Marcação padronizada do laudo — tamanhos e cores fixos, não editáveis pelo usuário.
 const MARKER_SIZE = 24 // px — diâmetro da bolinha do número
 const LINE_THICKNESS = 2.5 // px — peso da linha entre o número e o ponto real
-// "bolinha da minúcia" — miolo vermelho com o dobro da espessura da linha, mais 1px de borda branca de cada lado
+// "bolinha da minúcia" — toda vermelha, sem borda
 const ANCHOR_DOT_SIZE = LINE_THICKNESS * 2 + 2
 const NUMBER_COLOR = '#dc2626' // vermelho
 const DOT_COLOR = '#ffffff' // branco
 const ANCHOR_DOT_COLOR = '#dc2626'
 export const FRAME_COLOR: Record<ImageSlot, string> = { A: '#dc2626', B: '#2563eb' }
+
+// Como a imagem fica posicionada no quadro. Sem recorte, ela gira/escala em torno do próprio
+// centro. Com recorte, tudo gira/escala em torno do centro da área recortada, que é
+// ajustada (zoom "fit") para preencher o quadro — assim só aparece o que foi recortado e
+// espelhar/girar nunca manda o recorte para fora do quadro.
+interface Geometry {
+  baseW: number
+  baseH: number
+  // Ponto fixo da imagem (px, no palco): fica no centro do quadro (mais o pan).
+  pivotX: number
+  pivotY: number
+  // Zoom efetivo: o zoom do usuário vezes o ajuste do recorte ao quadro.
+  zoom: number
+  panX: number
+  panY: number
+  rotation: number
+  flipped: boolean
+  vw: number
+  vh: number
+}
+
+function computeGeometry(
+  base: { width: number; height: number },
+  viewport: { width: number; height: number },
+  t: Pick<ImageTransform, 'zoom' | 'panX' | 'panY' | 'rotation' | 'flipped'>,
+  mask: CropMask | null,
+): Geometry {
+  let pivotPctX = 50
+  let pivotPctY = 50
+  let fit = 1
+  if (mask && mask.points.length >= 3 && base.width > 0 && base.height > 0 && viewport.width > 0) {
+    const xs = mask.points.map((p) => p.x)
+    const ys = mask.points.map((p) => p.y)
+    pivotPctX = (Math.min(...xs) + Math.max(...xs)) / 2
+    pivotPctY = (Math.min(...ys) + Math.max(...ys)) / 2
+    // O contorno, já girado como está na tela, precisa caber inteiro no quadro.
+    const rad = (t.rotation * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    let halfW = 0
+    let halfH = 0
+    for (const p of mask.points) {
+      const dx = ((p.x - pivotPctX) / 100) * base.width
+      const dy = ((p.y - pivotPctY) / 100) * base.height
+      halfW = Math.max(halfW, Math.abs(dx * cos - dy * sin))
+      halfH = Math.max(halfH, Math.abs(dx * sin + dy * cos))
+    }
+    if (halfW > 0 && halfH > 0) fit = Math.min(viewport.width / 2 / halfW, viewport.height / 2 / halfH)
+  }
+  return {
+    baseW: base.width,
+    baseH: base.height,
+    pivotX: (pivotPctX / 100) * base.width,
+    pivotY: (pivotPctY / 100) * base.height,
+    zoom: t.zoom * fit,
+    panX: (t.panX / 100) * base.width,
+    panY: (t.panY / 100) * base.height,
+    rotation: t.rotation,
+    flipped: t.flipped,
+    vw: viewport.width,
+    vh: viewport.height,
+  }
+}
+
+// De pixels locais do quadro (relativos ao canto do próprio quadro) para % da imagem.
+function geometryLocalToPercent(g: Geometry, x: number, y: number): Coordinate {
+  const offsetX = x - g.vw / 2 - g.panX
+  const offsetY = y - g.vh / 2 - g.panY
+  const rad = (g.rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const afterRotX = offsetX * cos + offsetY * sin
+  const afterRotY = -offsetX * sin + offsetY * cos
+  const flipFactor = g.flipped ? -1 : 1
+  const localX = (afterRotX / g.zoom) * flipFactor
+  const localY = afterRotY / g.zoom
+  return {
+    x: ((g.pivotX + localX) / g.baseW) * 100,
+    y: ((g.pivotY + localY) / g.baseH) * 100,
+  }
+}
+
+// Inversa de geometryLocalToPercent.
+function geometryPercentToLocal(g: Geometry, c: Coordinate): { x: number; y: number } {
+  const localX = (c.x / 100) * g.baseW - g.pivotX
+  const localY = (c.y / 100) * g.baseH - g.pivotY
+  const flipFactor = g.flipped ? -1 : 1
+  const afterRotX = localX * flipFactor * g.zoom
+  const afterRotY = localY * g.zoom
+  const rad = (g.rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  return {
+    x: g.vw / 2 + g.panX + afterRotX * cos - afterRotY * sin,
+    y: g.vh / 2 + g.panY + afterRotX * sin + afterRotY * cos,
+  }
+}
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
@@ -160,6 +269,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   otherTransform,
   cropMask,
   otherCropMask,
+  magnifier,
   canCreate: allowCreate,
   onUpload,
   onApplyCrop,
@@ -186,10 +296,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   >(null)
   const draggingMinutiaId = useRef<number | null>(null)
   const pendingClickRef = useRef<{ x: number; y: number } | null>(null)
-  // Qual parte do marcador está sendo arrastada, e onde tudo estava no início do arraste.
+  // Qual parte do marcador está sendo arrastada, e onde tudo estava no início do arraste
+  // (em pixels locais do quadro, e o ponto/deslocamento em % da imagem).
   const dragPartRef = useRef<{
     part: MarkerPart
-    startCursor: Coordinate
+    startPointer: { x: number; y: number }
+    startPoint: { x: number; y: number }
+    startLabel: { x: number; y: number }
     startCoord: Coordinate
     startOffset: Coordinate
   } | null>(null)
@@ -208,6 +321,8 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const [cropMode, setCropMode] = useState(false)
   const [cropShape, setCropShape] = useState<CropShape>('square')
   const [cropRect, setCropRect] = useState<CropRect | null>(null)
+  // No recorte "Quadrado": mantém a seleção sempre quadrada ao mexer nos cantos e nos lados.
+  const [keepSquare, setKeepSquare] = useState(true)
   // Recorte livre: caminho desenhado à mão (em pixels locais do palco), fechado ao soltar o mouse.
   const [freehandPoints, setFreehandPoints] = useState<Coordinate[]>([])
   const [freehandDrawing, setFreehandDrawing] = useState(false)
@@ -299,6 +414,15 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const panXpx = (transform.panX / 100) * baseSize.width
   const panYpx = (transform.panY / 100) * baseSize.height
 
+  // Geometria da imagem no quadro (ver Geometry). Em modo de recorte a imagem inteira aparece
+  // sem zoom/pan e sem o recorte já aplicado, para poder escolher qualquer área dela.
+  const geom = computeGeometry(
+    baseSize,
+    viewportSize,
+    cropMode ? { ...transform, zoom: 1, panX: 0, panY: 0 } : transform,
+    cropMode ? null : cropMask,
+  )
+
   const ghostScale =
     otherNatural && viewportSize.width > 0
       ? Math.min(viewportSize.width / otherNatural.w, viewportSize.height / otherNatural.h)
@@ -307,109 +431,12 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     width: (otherNatural?.w ?? 0) * ghostScale,
     height: (otherNatural?.h ?? 0) * ghostScale,
   }
-  const otherPanXpx = (otherTransform.panX / 100) * ghostBaseSize.width
-  const otherPanYpx = (otherTransform.panY / 100) * ghostBaseSize.height
+  const ghostGeom = computeGeometry(ghostBaseSize, viewportSize, otherTransform, otherCropMask)
 
-  // Converte uma posição de tela para porcentagem da imagem, SEM travar nada —
-  // usado tanto para o ponto real quanto para descobrir onde ficam os cantos do
-  // quadro (viewport) em espaço de porcentagem, já considerando zoom/pan/rotação.
-  const toPercentUnclamped = useCallback(
-    (clientX: number, clientY: number): Coordinate => {
-      const viewportRect = viewportRef.current!.getBoundingClientRect()
-      const stageLeft = (viewportRect.width - baseSize.width) / 2
-      const stageTop = (viewportRect.height - baseSize.height) / 2
-      const centerScreenX = viewportRect.left + stageLeft + baseSize.width / 2
-      const centerScreenY = viewportRect.top + stageTop + baseSize.height / 2
-
-      const offsetX = clientX - centerScreenX
-      const offsetY = clientY - centerScreenY
-
-      const afterPanX = offsetX - panXpx
-      const afterPanY = offsetY - panYpx
-
-      const rad = (transform.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      const afterRotX = afterPanX * cos + afterPanY * sin
-      const afterRotY = -afterPanX * sin + afterPanY * cos
-
-      const flipFactor = transform.flipped ? -1 : 1
-      const localX = (afterRotX / transform.zoom) * flipFactor
-      const localY = afterRotY / transform.zoom
-
-      return {
-        x: ((localX + baseSize.width / 2) / baseSize.width) * 100,
-        y: ((localY + baseSize.height / 2) / baseSize.height) * 100,
-      }
-    },
-    [baseSize, panXpx, panYpx, transform.rotation, transform.zoom, transform.flipped],
-  )
-
-  // Mesma conta de toPercentUnclamped, mas a partir de um ponto já em pixels locais do
-  // palco (relativo ao próprio viewport, sem precisar de getBoundingClientRect) — usado
-  // para converter o recorte desenhado na tela em % da imagem ORIGINAL, que é o espaço
-  // onde a máscara de recorte (não-destrutiva) e os pontos marcados vivem para sempre.
-  const localToPercent = useCallback(
-    (x: number, y: number): Coordinate => {
-      const stageLeft = (viewportSize.width - baseSize.width) / 2
-      const stageTop = (viewportSize.height - baseSize.height) / 2
-      const centerLocalX = stageLeft + baseSize.width / 2
-      const centerLocalY = stageTop + baseSize.height / 2
-
-      const offsetX = x - centerLocalX
-      const offsetY = y - centerLocalY
-
-      const afterPanX = offsetX - panXpx
-      const afterPanY = offsetY - panYpx
-
-      const rad = (transform.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      const afterRotX = afterPanX * cos + afterPanY * sin
-      const afterRotY = -afterPanX * sin + afterPanY * cos
-
-      const flipFactor = transform.flipped ? -1 : 1
-      const localX = (afterRotX / transform.zoom) * flipFactor
-      const localY = afterRotY / transform.zoom
-
-      return {
-        x: ((localX + baseSize.width / 2) / baseSize.width) * 100,
-        y: ((localY + baseSize.height / 2) / baseSize.height) * 100,
-      }
-    },
-    [baseSize, viewportSize, panXpx, panYpx, transform.rotation, transform.zoom, transform.flipped],
-  )
-
-  // Inversa de localToPercent: de % da imagem original para pixels locais do palco, na
-  // transformação (zoom/pan/rotação) ATUAL — usado para reabrir o recorte já existente
-  // com a seleção na mesma posição de antes (se nada girou/moveu desde então).
-  const percentToLocal = useCallback(
-    (coord: Coordinate): { x: number; y: number } => {
-      const stageLeft = (viewportSize.width - baseSize.width) / 2
-      const stageTop = (viewportSize.height - baseSize.height) / 2
-      const centerLocalX = stageLeft + baseSize.width / 2
-      const centerLocalY = stageTop + baseSize.height / 2
-
-      const localX = (coord.x / 100) * baseSize.width - baseSize.width / 2
-      const localY = (coord.y / 100) * baseSize.height - baseSize.height / 2
-
-      const flipFactor = transform.flipped ? -1 : 1
-      const afterRotX = localX * flipFactor * transform.zoom
-      const afterRotY = localY * transform.zoom
-
-      const rad = (transform.rotation * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-      const afterPanX = afterRotX * cos - afterRotY * sin
-      const afterPanY = afterRotX * sin + afterRotY * cos
-
-      const offsetX = afterPanX + panXpx
-      const offsetY = afterPanY + panYpx
-
-      return { x: offsetX + centerLocalX, y: offsetY + centerLocalY }
-    },
-    [baseSize, viewportSize, panXpx, panYpx, transform.rotation, transform.zoom, transform.flipped],
-  )
+  // Pixels locais do quadro (relativos ao canto dele) <-> % da imagem ORIGINAL, que é o
+  // espaço onde a máscara de recorte (não-destrutiva) e os pontos marcados vivem para sempre.
+  const localToPercent = (x: number, y: number): Coordinate => geometryLocalToPercent(geom, x, y)
+  const percentToLocal = (coord: Coordinate): { x: number; y: number } => geometryPercentToLocal(geom, coord)
 
   // "polygon(...)" em % (o mesmo espaço em que os pontos marcados vivem), aplicado
   // dentro do palco já transformado — por isso a máscara acompanha pan/zoom/rotação
@@ -419,62 +446,25 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     return `polygon(${mask.points.map((p) => `${p.x}% ${p.y}%`).join(', ')})`
   }
 
-  // Limites (em % da imagem) dentro dos quais um ponto ou número pode ficar sem sair do quadro.
-  const frameBounds = useCallback(
-    (): { minX: number; maxX: number; minY: number; maxY: number } | null => {
-      if (!viewportRef.current || baseSize.width === 0) return null
-      const viewportRect = viewportRef.current.getBoundingClientRect()
+  // Trava um ponto (pixels locais) dentro da área visível do quadro, a `inset` px da borda.
+  function clampToFrame(p: { x: number; y: number }, inset: number) {
+    const min = FRAME_BORDER + inset
+    return {
+      x: clamp(p.x, min, Math.max(min, viewportSize.width - min)),
+      y: clamp(p.y, min, Math.max(min, viewportSize.height - min)),
+    }
+  }
 
-      // O ponto (ou o número, no modo linha) nunca pode sair do quadro visível —
-      // então os limites são os 4 cantos do PRÓPRIO QUADRO convertidos pra
-      // porcentagem da imagem (não apenas 0-100%, que seria só a foto, ignorando
-      // zoom/pan/rotação, e permitia arrastar pra fora do quadro quando com zoom).
-      const corners = [
-        toPercentUnclamped(viewportRect.left, viewportRect.top),
-        toPercentUnclamped(viewportRect.right, viewportRect.top),
-        toPercentUnclamped(viewportRect.left, viewportRect.bottom),
-        toPercentUnclamped(viewportRect.right, viewportRect.bottom),
-      ]
-      let minX = Math.min(...corners.map((c) => c.x))
-      let maxX = Math.max(...corners.map((c) => c.x))
-      let minY = Math.min(...corners.map((c) => c.y))
-      let maxY = Math.max(...corners.map((c) => c.y))
+  // O número nunca sai do quadro: fica sempre a uma distância da borda (raio + folga).
+  const LABEL_INSET = MARKER_SIZE / 2 + LABEL_EDGE_GAP
 
-      // A bolinha do número tem um tamanho fixo NA TELA (não escala com o zoom),
-      // então o próprio raio dela precisa ficar de fora do quadro — senão metade
-      // dela ainda vaza pela borda mesmo com o centro travado exatamente na borda.
-      const radiusPx = MARKER_SIZE / 2
-      const insetXPercent = (radiusPx / (baseSize.width * transform.zoom)) * 100
-      const insetYPercent = (radiusPx / (baseSize.height * transform.zoom)) * 100
-      if (maxX - minX > insetXPercent * 2) {
-        minX += insetXPercent
-        maxX -= insetXPercent
-      } else {
-        const mid = (minX + maxX) / 2
-        minX = maxX = mid
-      }
-      if (maxY - minY > insetYPercent * 2) {
-        minY += insetYPercent
-        maxY -= insetYPercent
-      } else {
-        const mid = (minY + maxY) / 2
-        minY = maxY = mid
-      }
-
-      return { minX, maxX, minY, maxY }
-    },
-    [baseSize, toPercentUnclamped, transform.zoom],
-  )
-
-  const screenToPercent = useCallback(
-    (clientX: number, clientY: number): Coordinate | null => {
-      const bounds = frameBounds()
-      if (!bounds) return null
-      const { x: percentX, y: percentY } = toPercentUnclamped(clientX, clientY)
-      return { x: clamp(percentX, bounds.minX, bounds.maxX), y: clamp(percentY, bounds.minY, bounds.maxY) }
-    },
-    [frameBounds, toPercentUnclamped],
-  )
+  // Posição do mouse -> % da imagem, com o número travado dentro do quadro. Feito em pixels
+  // da tela (e não em % da imagem), então vale com qualquer zoom, giro ou espelhamento.
+  function screenToPercent(clientX: number, clientY: number): Coordinate | null {
+    if (!viewportRef.current || baseSize.width === 0) return null
+    const local = clampToFrame(clientToViewportLocal(clientX, clientY), LABEL_INSET)
+    return localToPercent(local.x, local.y)
+  }
 
   function handleMarkClick(e: MouseEvent<HTMLDivElement>) {
     if (adjustMode || cropMode || !allowCreate || !image) return
@@ -521,7 +511,10 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   // então a parte que tinha sido recortada antes volta a aparecer e pode ser reincluída
   // livremente. Se já havia um recorte, a seleção começa exatamente onde ele estava.
   function startCrop() {
-    const localPoints = cropMask?.points.map(percentToLocal) ?? null
+    // Em modo de recorte a imagem aparece inteira, sem zoom/pan (ver geom): a seleção
+    // anterior é posicionada nessa mesma visão.
+    const cropGeom = computeGeometry(baseSize, viewportSize, { ...transform, zoom: 1, panX: 0, panY: 0 }, null)
+    const localPoints = cropMask?.points.map((p) => geometryPercentToLocal(cropGeom, p)) ?? null
     const rect = localPoints ? rectFromAxisAlignedPoints(localPoints) : null
     if (rect) {
       setCropShape('square')
@@ -555,6 +548,61 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     setFreehandPoints([])
     setFreehandDrawing(false)
     setCropRect(shape === 'square' ? centeredCropRect() : null)
+  }
+
+  // "Manter quadrado" ligado: a seleção continua um quadrado ao arrastar qualquer canto ou lado.
+  // O lado arrastado segue o mouse e o lado oposto fica parado; a outra dimensão cresce/encolhe
+  // junto, centrada (num canto, a partir do canto oposto). Nunca passa da borda do quadro.
+  function resizeSquare(handle: CropHandle, r: CropRect, moveX: number, moveY: number): CropRect {
+    const vw = viewportSize.width
+    const vh = viewportSize.height
+    const side = (wanted: number, maxSide: number) => clamp(wanted, MIN_CROP_SIZE, Math.max(MIN_CROP_SIZE, maxSide))
+
+    if (isCropEdgeHandle(handle)) {
+      const cx = r.x + r.width / 2
+      const cy = r.y + r.height / 2
+      if (handle === 'n' || handle === 's') {
+        const maxByWidth = 2 * Math.min(cx, vw - cx)
+        if (handle === 'n') {
+          const bottom = r.y + r.height
+          const s = side(bottom - moveY, Math.min(bottom, maxByWidth))
+          return { x: cx - s / 2, y: bottom - s, width: s, height: s }
+        }
+        const s = side(moveY - r.y, Math.min(vh - r.y, maxByWidth))
+        return { x: cx - s / 2, y: r.y, width: s, height: s }
+      }
+      const maxByHeight = 2 * Math.min(cy, vh - cy)
+      if (handle === 'w') {
+        const right = r.x + r.width
+        const s = side(right - moveX, Math.min(right, maxByHeight))
+        return { x: right - s, y: cy - s / 2, width: s, height: s }
+      }
+      const s = side(moveX - r.x, Math.min(vw - r.x, maxByHeight))
+      return { x: r.x, y: cy - s / 2, width: s, height: s }
+    }
+
+    const opposite = CROP_CORNER_OPPOSITE[handle]
+    const ax = opposite.x === 'left' ? r.x : r.x + r.width
+    const ay = opposite.y === 'top' ? r.y : r.y + r.height
+    const dirX = moveX >= ax ? 1 : -1
+    const dirY = moveY >= ay ? 1 : -1
+    const availX = dirX > 0 ? vw - ax : ax
+    const availY = dirY > 0 ? vh - ay : ay
+    const s = side(Math.max(Math.abs(moveX - ax), Math.abs(moveY - ay)), Math.min(availX, availY))
+    return { x: dirX > 0 ? ax : ax - s, y: dirY > 0 ? ay : ay - s, width: s, height: s }
+  }
+
+  // Ao ligar "Manter quadrado" com uma seleção que não é quadrada, ela vira o maior quadrado
+  // que cabe nela, no mesmo centro.
+  function toggleKeepSquare() {
+    const next = !keepSquare
+    setKeepSquare(next)
+    if (next && cropRect) {
+      const s = Math.min(cropRect.width, cropRect.height)
+      const cx = cropRect.x + cropRect.width / 2
+      const cy = cropRect.y + cropRect.height / 2
+      setCropRect({ x: cx - s / 2, y: cy - s / 2, width: s, height: s })
+    }
   }
 
   function handleCropRectPointerDown(e: PointerEvent<HTMLDivElement>) {
@@ -598,8 +646,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     const moveX = clamp(pointer.x, 0, viewportSize.width)
     const moveY = clamp(pointer.y, 0, viewportSize.height)
 
-    // Cada lado se move de forma independente: arrastar uma borda ou um canto nunca mexe
-    // nos lados opostos, então dá pra recortar só de cima, só de um lado, só um canto, etc.
+    if (keepSquare) {
+      setCropRect(resizeSquare(handle, startRect, moveX, moveY))
+      return
+    }
+
+    // Sem "Manter quadrado", cada lado se move de forma independente: arrastar uma borda ou
+    // um canto nunca mexe nos lados opostos, então dá pra recortar só de cima, só de um lado, etc.
     if (isCropEdgeHandle(handle)) {
       if (handle === 'n') {
         const bottom = startRect.y + startRect.height
@@ -699,9 +752,16 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       ]
       onApplyCrop({ points: corners.map((c) => localToPercent(c.x, c.y)) })
     }
+    // O recorte novo passa a preencher o quadro (ver Geometry): zoom e posição recomeçam do ajuste.
+    setTransform((t) => ({ ...t, zoom: 1, panX: 0, panY: 0 }))
     setCropMode(false)
     setCropRect(null)
     setFreehandPoints([])
+  }
+
+  function revertCrop() {
+    onRevertCrop()
+    setTransform((t) => ({ ...t, zoom: 1, panX: 0, panY: 0 }))
   }
 
   // "Concluir ajuste" enquanto uma seleção de recorte ainda está aberta (sem ter clicado em
@@ -720,11 +780,9 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   // Centro da imagem na tela (mesmo pivô usado pelo giro), considerando o pan atual.
   function screenCenter() {
     const viewportRect = viewportRef.current!.getBoundingClientRect()
-    const stageLeft = (viewportRect.width - baseSize.width) / 2
-    const stageTop = (viewportRect.height - baseSize.height) / 2
     return {
-      x: viewportRect.left + stageLeft + baseSize.width / 2 + panXpx,
-      y: viewportRect.top + stageTop + baseSize.height / 2 + panYpx,
+      x: viewportRect.left + viewportRect.width / 2 + panXpx,
+      y: viewportRect.top + viewportRect.height / 2 + panYpx,
     }
   }
 
@@ -790,8 +848,18 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     const m = minutiae.find((mm) => mm.id === id)
     const coord = m?.[coordKey]
     const offset = m?.[offsetKey] ?? { x: 0, y: 0 }
-    const startCursor = toPercentUnclamped(e.clientX, e.clientY)
-    dragPartRef.current = coord ? { part, startCursor, startCoord: coord, startOffset: offset } : null
+    // O arraste é relativo ao ponto onde o marcador foi pego (tudo em pixels da tela), então
+    // o marcador fica sempre exatamente debaixo do mouse, sem pular.
+    dragPartRef.current = coord
+      ? {
+          part,
+          startPointer: clientToViewportLocal(e.clientX, e.clientY),
+          startPoint: percentToLocal(coord),
+          startLabel: percentToLocal({ x: coord.x + offset.x, y: coord.y + offset.y }),
+          startCoord: coord,
+          startOffset: offset,
+        }
+      : null
     // Enquanto esse lado espera um ponto novo, um clique em cima (ou perto) de um
     // marcador existente precisa marcar o ponto novo — não abrir a edição do anterior.
     // Por isso a edição só começa depois que o mouse realmente se move um pouco.
@@ -812,60 +880,61 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       pendingClickRef.current = null
       onStartEdit(draggingMinutiaId.current)
     }
-    const cursor = screenToPercent(e.clientX, e.clientY)
-    if (!cursor) return
     const drag = dragPartRef.current
-    if (drag?.part === 'anchor') {
+    if (!drag || baseSize.width === 0) return
+    const id = draggingMinutiaId.current
+    const pointer = clientToViewportLocal(e.clientX, e.clientY)
+    const moveX = pointer.x - drag.startPointer.x
+    const moveY = pointer.y - drag.startPointer.y
+
+    // Limites (pixels locais) dentro dos quais cada coisa pode ficar sem sair do quadro: o
+    // número fica a uma folga da borda; a bolinha da minúcia pode chegar bem perto dela.
+    const limits = (inset: number) => {
+      const min = FRAME_BORDER + inset
+      return { minX: min, maxX: Math.max(min, viewportSize.width - min), minY: min, maxY: Math.max(min, viewportSize.height - min) }
+    }
+    const labelLim = limits(LABEL_INSET)
+    const pointLim = limits(POINT_EDGE_INSET)
+
+    if (drag.part === 'anchor') {
       // Bolinha da minúcia: move só o ponto real; o número fica parado onde está
       // (o deslocamento do número é recalculado para ele não sair do lugar).
-      // Segue o arraste a partir de onde a bolinha foi pega (a área de toque é maior que
-      // ela), em vez de pular o ponto para baixo do cursor.
-      const bounds = frameBounds()
-      if (!bounds) return
-      const now = toPercentUnclamped(e.clientX, e.clientY)
-      const point = {
-        x: clamp(drag.startCoord.x + now.x - drag.startCursor.x, bounds.minX, bounds.maxX),
-        y: clamp(drag.startCoord.y + now.y - drag.startCursor.y, bounds.minY, bounds.maxY),
+      const p = {
+        x: clamp(drag.startPoint.x + moveX, pointLim.minX, pointLim.maxX),
+        y: clamp(drag.startPoint.y + moveY, pointLim.minY, pointLim.maxY),
       }
+      const point = localToPercent(p.x, p.y)
       const labelX = drag.startCoord.x + drag.startOffset.x
       const labelY = drag.startCoord.y + drag.startOffset.y
-      onMovePoint(draggingMinutiaId.current, point)
-      onMoveLabel(draggingMinutiaId.current, { x: labelX - point.x, y: labelY - point.y })
+      onMovePoint(id, point)
+      onMoveLabel(id, { x: labelX - point.x, y: labelY - point.y })
       return
     }
-    if (drag?.part === 'line') {
-      // Linha: move o conjunto todo (ponto + número), sem deixar nenhum dos dois sair do quadro.
-      const bounds = frameBounds()
-      if (!bounds) return
-      const now = toPercentUnclamped(e.clientX, e.clientY)
-      const { startCoord: c, startOffset: o } = drag
-      const dx = clamp(
-        now.x - drag.startCursor.x,
-        Math.max(bounds.minX - c.x, bounds.minX - (c.x + o.x)),
-        Math.min(bounds.maxX - c.x, bounds.maxX - (c.x + o.x)),
-      )
-      const dy = clamp(
-        now.y - drag.startCursor.y,
-        Math.max(bounds.minY - c.y, bounds.minY - (c.y + o.y)),
-        Math.min(bounds.maxY - c.y, bounds.maxY - (c.y + o.y)),
-      )
-      onMovePoint(draggingMinutiaId.current, { x: c.x + dx, y: c.y + dy })
+
+    if (drag.part === 'label' && arrowMode) {
+      // Modo linha: arrastar o número move só ele (o ponto real fica parado).
+      const l = {
+        x: clamp(drag.startLabel.x + moveX, labelLim.minX, labelLim.maxX),
+        y: clamp(drag.startLabel.y + moveY, labelLim.minY, labelLim.maxY),
+      }
+      const label = localToPercent(l.x, l.y)
+      onMoveLabel(id, { x: label.x - drag.startCoord.x, y: label.y - drag.startCoord.y })
       return
     }
-    if (arrowMode) {
-      const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
-      const point = m?.[coordKey]
-      if (!point) return
-      onMoveLabel(draggingMinutiaId.current, { x: cursor.x - point.x, y: cursor.y - point.y })
-    } else {
-      // O que o usuário está arrastando na tela é a bolinha (que fica em
-      // coord+offset quando o ponto já tem uma linha) — não o próprio coord.
-      // Por isso o offset entra na conta: a bolinha (já travada no quadro por
-      // `cursor`) é o que deve ficar em cima do mouse, não o coord sozinho.
-      const m = minutiae.find((mm) => mm.id === draggingMinutiaId.current)
-      const offset = m?.[offsetKey] ?? { x: 0, y: 0 }
-      onMovePoint(draggingMinutiaId.current, { x: cursor.x - offset.x, y: cursor.y - offset.y })
-    }
+
+    // A linha (ou o número, fora do modo linha) move o conjunto todo — ponto e número juntos,
+    // sem deixar nenhum dos dois sair do quadro.
+    const dx = clamp(
+      moveX,
+      Math.max(labelLim.minX - drag.startLabel.x, pointLim.minX - drag.startPoint.x),
+      Math.min(labelLim.maxX - drag.startLabel.x, pointLim.maxX - drag.startPoint.x),
+    )
+    const dy = clamp(
+      moveY,
+      Math.max(labelLim.minY - drag.startLabel.y, pointLim.minY - drag.startPoint.y),
+      Math.min(labelLim.maxY - drag.startLabel.y, pointLim.maxY - drag.startPoint.y),
+    )
+    onMovePoint(id, localToPercent(drag.startPoint.x + dx, drag.startPoint.y + dy))
   }
 
   function handleMarkerPointerUp(e: PointerEvent<Element>) {
@@ -934,7 +1003,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
       </div>
 
       {/* Quadro + barra de ajuste lateral: à esquerda do quadro A e à direita do quadro B. */}
-      <div className={`relative flex flex-col gap-2 md:items-start ${slot === 'B' ? 'md:flex-row-reverse' : 'md:flex-row'}`}>
+      <div className={`relative flex flex-col gap-2 md:items-start md:justify-center ${slot === 'B' ? 'md:flex-row-reverse' : 'md:flex-row'}`}>
       {(adjustMode || (reserveSidebar && !sidebarOutside)) && (
         <div
           className={
@@ -981,9 +1050,25 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                   Livre
                 </button>
               </div>
+              {cropShape === 'square' && (
+                <button
+                  onClick={toggleKeepSquare}
+                  className={`flex w-full items-center justify-center gap-1 rounded-md px-2 py-1 font-medium shadow-sm ring-1 ${
+                    keepSquare
+                      ? 'bg-blue-600 text-white ring-blue-600'
+                      : 'bg-white text-gray-700 ring-gray-300 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700'
+                  }`}
+                  title="Ligado: a seleção continua um quadrado ao mexer nos cantos e nos lados. Desligado: cada lado se move separado dos outros."
+                >
+                  <Square size={14} />
+                  Manter quadrado
+                </button>
+              )}
               <span className="text-gray-400 dark:text-gray-500">
                 {cropShape === 'square'
-                  ? 'Arraste um canto ou o meio de um lado pra ajustar só aquele lado, ou o centro pra mover.'
+                  ? keepSquare
+                    ? 'Arraste um canto ou o meio de um lado pra aumentar ou diminuir o quadrado, ou o centro pra mover.'
+                    : 'Arraste um canto ou o meio de um lado pra ajustar só aquele lado, ou o centro pra mover.'
                   : 'Desenhe o contorno do recorte clicando e arrastando o mouse sobre a imagem.'}
               </span>
               <button
@@ -1294,7 +1379,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               </button>
               {cropMask && (
                 <button
-                  onClick={onRevertCrop}
+                  onClick={revertCrop}
                   className="flex items-center justify-center rounded p-1 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
                   title="Reverter recorte — volta a mostrar a imagem inteira, sem nenhum recorte aplicado"
                 >
@@ -1350,7 +1435,8 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         </div>
       )}
 
-      <div className="min-w-0 flex-1">
+      {/* Quadrado grande, quase a tela toda: nunca passa da altura da janela (menos o cabeçalho). */}
+      <div className="w-full min-w-0 flex-1 self-center md:self-start" style={{ maxWidth: 'max(480px, calc(100vh - 8rem))' }}>
       <div
         ref={viewportRef}
         onClick={handleMarkClick}
@@ -1380,12 +1466,13 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             // A exportação não entende o clip-path da imagem; ela lê esta marcação para recortá-la de verdade (ver cropExport.ts).
             data-crop-mask={!cropMode && buildClipPath(cropMask) ? JSON.stringify(cropMask!.points) : undefined}
             style={{
-              left: `calc(50% - ${baseSize.width / 2}px)`,
-              top: `calc(50% - ${baseSize.height / 2}px)`,
+              left: `calc(50% - ${geom.pivotX}px)`,
+              top: `calc(50% - ${geom.pivotY}px)`,
               width: baseSize.width,
               height: baseSize.height,
-              transform: `translate(${panXpx}px, ${panYpx}px) rotate(${transform.rotation}deg) scale(${transform.zoom}) scaleX(${transform.flipped ? -1 : 1})`,
-              transformOrigin: 'center center',
+              transform: `translate(${geom.panX}px, ${geom.panY}px) rotate(${geom.rotation}deg) scale(${geom.zoom}) scaleX(${geom.flipped ? -1 : 1})`,
+              // Tudo gira/escala em torno do centro do recorte (ou da imagem, sem recorte).
+              transformOrigin: `${geom.pivotX}px ${geom.pivotY}px`,
             }}
           >
             <img
@@ -1426,17 +1513,17 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                       // O non-scaling-stroke só neutraliza o esticamento do viewBox; o zoom
                       // (scale do CSS no palco) ainda engrossaria a linha — por isso a divisão,
                       // para ela ter a mesma espessura na tela nas duas imagens, com qualquer zoom.
-                      strokeWidth={LINE_THICKNESS / transform.zoom}
+                      strokeWidth={LINE_THICKNESS / geom.zoom}
                       vectorEffect="non-scaling-stroke"
                     />
-                    {/* Área de toque invisível e mais grossa por cima da linha, para arrastá-la. */}
+                    {/* Área de toque invisível, só um pouco mais grossa que a linha, para arrastá-la. */}
                     <line
                       x1={coord.x}
                       y1={coord.y}
                       x2={coord.x + offset.x}
                       y2={coord.y + offset.y}
                       stroke="transparent"
-                      strokeWidth={LINE_HIT_THICKNESS / transform.zoom}
+                      strokeWidth={LINE_HIT_THICKNESS / geom.zoom}
                       vectorEffect="non-scaling-stroke"
                       onPointerDown={(e) => handleMarkerPointerDown(e, m.id, 'line')}
                       onPointerMove={handleMarkerPointerMove}
@@ -1461,8 +1548,12 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               const hasOffset = offset.x !== 0 || offset.y !== 0
               const labelX = coord.x + offset.x
               const labelY = coord.y + offset.y
-              const flipFactor = transform.flipped ? -1 : 1
-              const counterTransform = `scale(${1 / transform.zoom}) scaleX(${flipFactor}) rotate(${-transform.rotation}deg)`
+              const flipFactor = geom.flipped ? -1 : 1
+              // Cada marcador é um ponto sem tamanho (0x0) no palco, e só o desenho dele — que
+              // tem sempre o mesmo tamanho NA TELA (contra-escala do zoom) — recebe o mouse. Se a
+              // área de toque fosse a caixa no palco, ela cresceria junto com o zoom e "pegaria"
+              // cliques muito longe do marcador. Com origem no canto, o translate(-50%) centra.
+              const counterTransform = `scale(${1 / geom.zoom}) scaleX(${flipFactor}) rotate(${-geom.rotation}deg) translate(-50%, -50%)`
               const numberVisible = showNumbers && !m.hideNumber
               return (
                 <div key={m.id}>
@@ -1473,30 +1564,35 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                       onPointerUp={handleMarkerPointerUp}
                       onPointerCancel={handleMarkerPointerUp}
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute -translate-x-1/2 -translate-y-1/2"
+                      className="absolute"
                       style={{
                         left: `${coord.x}%`,
                         top: `${coord.y}%`,
+                        width: 0,
+                        height: 0,
                         cursor: adjustMode ? cursor : 'move',
                         touchAction: 'none',
                       }}
                     >
-                      <div style={{ transform: counterTransform }}>
-                        {/* Área de toque maior que a bolinha, centrada nela. */}
+                      {/* Área de toque: um pouquinho maior que a bolinha, e redonda como ela. */}
+                      <div
+                        className="absolute left-0 top-0 flex items-center justify-center rounded-full"
+                        style={{
+                          width: ANCHOR_HIT_SIZE,
+                          height: ANCHOR_HIT_SIZE,
+                          transform: counterTransform,
+                          transformOrigin: '0 0',
+                        }}
+                        title={`Minúcia do ponto ${displayId(m.id)} — arraste para mover só o ponto`}
+                      >
                         <div
-                          className="flex items-center justify-center"
-                          style={{ width: ANCHOR_HIT_SIZE, height: ANCHOR_HIT_SIZE }}
-                          title={`Minúcia do ponto ${displayId(m.id)} — arraste para mover só o ponto`}
-                        >
-                          <div
-                            className="rounded-full border border-white shadow"
-                            style={{
-                              width: ANCHOR_DOT_SIZE,
-                              height: ANCHOR_DOT_SIZE,
-                              backgroundColor: ANCHOR_DOT_COLOR,
-                            }}
-                          />
-                        </div>
+                          className="rounded-full"
+                          style={{
+                            width: ANCHOR_DOT_SIZE,
+                            height: ANCHOR_DOT_SIZE,
+                            backgroundColor: ANCHOR_DOT_COLOR,
+                          }}
+                        />
                       </div>
                     </div>
                   )}
@@ -1506,31 +1602,33 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                     onPointerUp={handleMarkerPointerUp}
                     onPointerCancel={handleMarkerPointerUp}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+                    className="absolute"
                     style={{
                       left: `${labelX}%`,
                       top: `${labelY}%`,
+                      width: 0,
+                      height: 0,
                       cursor: adjustMode ? cursor : arrowMode ? 'crosshair' : 'move',
                       touchAction: 'none',
                     }}
                   >
-                    <div style={{ transform: counterTransform }}>
-                      <div
-                        className="flex items-center justify-center rounded-full shadow"
-                        style={{
-                          width: MARKER_SIZE,
-                          height: MARKER_SIZE,
-                          backgroundColor: DOT_COLOR,
-                          border: `2px solid ${NUMBER_COLOR}`,
-                          color: NUMBER_COLOR,
-                          fontFamily: 'Arial, Helvetica, sans-serif',
-                          fontWeight: 700,
-                          fontSize: MARKER_SIZE * 0.55,
-                        }}
-                        title={`Ponto ${displayId(m.id)}`}
-                      >
-                        {numberVisible ? displayId(m.id) : ''}
-                      </div>
+                    <div
+                      className="absolute left-0 top-0 flex items-center justify-center rounded-full shadow"
+                      style={{
+                        width: MARKER_SIZE,
+                        height: MARKER_SIZE,
+                        transform: counterTransform,
+                        transformOrigin: '0 0',
+                        backgroundColor: DOT_COLOR,
+                        border: `2px solid ${NUMBER_COLOR}`,
+                        color: NUMBER_COLOR,
+                        fontFamily: 'Arial, Helvetica, sans-serif',
+                        fontWeight: 700,
+                        fontSize: MARKER_SIZE * 0.55,
+                      }}
+                      title={`Ponto ${displayId(m.id)}`}
+                    >
+                      {numberVisible ? displayId(m.id) : ''}
                     </div>
                   </div>
                 </div>
@@ -1544,12 +1642,12 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             <div
               className="absolute"
               style={{
-                left: `calc(50% - ${ghostBaseSize.width / 2}px)`,
-                top: `calc(50% - ${ghostBaseSize.height / 2}px)`,
+                left: `calc(50% - ${ghostGeom.pivotX}px)`,
+                top: `calc(50% - ${ghostGeom.pivotY}px)`,
                 width: ghostBaseSize.width,
                 height: ghostBaseSize.height,
-                transform: `translate(${otherPanXpx}px, ${otherPanYpx}px) rotate(${otherTransform.rotation}deg) scale(${otherTransform.zoom}) scaleX(${otherTransform.flipped ? -1 : 1})`,
-                transformOrigin: 'center center',
+                transform: `translate(${ghostGeom.panX}px, ${ghostGeom.panY}px) rotate(${ghostGeom.rotation}deg) scale(${ghostGeom.zoom}) scaleX(${ghostGeom.flipped ? -1 : 1})`,
+                transformOrigin: `${ghostGeom.pivotX}px ${ghostGeom.pivotY}px`,
                 clipPath: buildClipPath(otherCropMask),
               }}
             >
@@ -1566,7 +1664,9 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
         {cropMode && cropRect && (
           <div
-            className="absolute inset-0"
+            className="absolute"
+            // Mesma origem das contas do recorte (canto da borda do quadro), não da área interna.
+            style={{ left: -FRAME_BORDER, top: -FRAME_BORDER, width: viewportSize.width, height: viewportSize.height }}
             onPointerDown={(e) => e.stopPropagation()}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
@@ -1627,12 +1727,12 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
         {cropMode && cropShape === 'free' && (
           <div
-            className="absolute inset-0 cursor-crosshair"
+            className="absolute cursor-crosshair"
             onPointerDown={handleFreehandPointerDown}
             onPointerMove={handleFreehandPointerMove}
             onPointerUp={handleFreehandPointerUp}
             onPointerCancel={handleFreehandPointerUp}
-            style={{ touchAction: 'none' }}
+            style={{ left: -FRAME_BORDER, top: -FRAME_BORDER, width: viewportSize.width, height: viewportSize.height, touchAction: 'none' }}
           >
             <svg className="pointer-events-none absolute inset-0 h-full w-full">
               {freehandPoints.length > 2 && (
@@ -1668,6 +1768,39 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             </svg>
           </div>
         )}
+
+        {/* Lupa flutuante sobre o quadro (não atrapalha o mouse): fica do lado oposto do ponto —
+            ponto na metade de cima, lupa embaixo dele; ponto na metade de baixo, lupa em cima. */}
+        {magnifier && image && !cropMode && baseSize.width > 0 && viewportSize.width > 0 && (() => {
+          const p = percentToLocal(magnifier.point)
+          const edge = FRAME_BORDER + 6
+          const left = clamp(p.x - MAGNIFIER_SIZE / 2, edge, viewportSize.width - MAGNIFIER_SIZE - edge)
+          const below = p.y < viewportSize.height / 2
+          const top = clamp(
+            below ? p.y + MAGNIFIER_GAP : p.y - MAGNIFIER_GAP - MAGNIFIER_HEIGHT,
+            edge,
+            viewportSize.height - MAGNIFIER_HEIGHT - edge,
+          )
+          return (
+            <div className="pointer-events-none absolute z-30" style={{ left: left - FRAME_BORDER, top: top - FRAME_BORDER }}>
+              <Magnifier
+                image={image}
+                point={magnifier.point}
+                label={`${magnifier.variant === 'editing' ? 'Editando' : 'Referência'} · Imagem ${slot}`}
+                variant={magnifier.variant}
+                color={FRAME_COLOR[slot]}
+                rotation={transform.rotation}
+                flipped={transform.flipped}
+                inverted={transform.inverted}
+                levelsBlack={transform.levelsBlack}
+                darken={transform.darken}
+                lighten={transform.lighten}
+                scale={baseSize.width * geom.zoom}
+                natural={naturalSizeRef.current}
+              />
+            </div>
+          )
+        })()}
       </div>
       </div>
       </div>

@@ -14,11 +14,20 @@ interface MagnifierProps {
   levelsBlack?: number
   darken?: number
   lighten?: number
-  zoom?: number
+  // Largura (px) com que a imagem inteira aparece hoje no quadro (já com zoom/recorte).
+  scale?: number
+  // Tamanho natural da imagem, se quem chama já souber (evita decodificar a imagem de novo).
+  natural?: { w: number; h: number } | null
 }
 
-const SIZE = 205
+// Tamanho do círculo da lupa e altura total (círculo + rótulo) — usados pelo quadro para
+// posicionar a lupa sem sair dele.
+export const MAGNIFIER_SIZE = 205
+export const MAGNIFIER_HEIGHT = 236
+const SIZE = MAGNIFIER_SIZE
 const ZOOM = 3.2
+// Quanto a lupa amplia em relação ao que já aparece no quadro.
+const MAGNIFY_FACTOR = 1.25
 
 export default function Magnifier({
   image,
@@ -32,27 +41,31 @@ export default function Magnifier({
   levelsBlack = 0,
   darken = 0,
   lighten = 0,
-  zoom = 1,
+  scale = 0,
+  natural: naturalProp = null,
 }: MagnifierProps) {
-  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null)
+  const [probed, setProbed] = useState<{ w: number; h: number } | null>(null)
 
   useEffect(() => {
+    if (naturalProp) return
     let cancelled = false
     const img = new Image()
     img.onload = () => {
-      if (!cancelled) setNatural({ w: img.naturalWidth, h: img.naturalHeight })
+      if (!cancelled) setProbed({ w: img.naturalWidth, h: img.naturalHeight })
     }
     img.src = image
     return () => {
       cancelled = true
     }
-  }, [image])
+  }, [image, naturalProp])
 
-  // A lupa acompanha o zoom do painel (senão, numa página inteira de prontuário, o dedo
+  const natural = naturalProp ?? probed
+
+  // A lupa acompanha o zoom do quadro (senão, numa página inteira de prontuário, o dedo
   // ficaria minúsculo nela), mas sem passar de 2x a resolução real da imagem — acima
   // disso não há mais detalhe para mostrar, só um elemento gigante e pesado.
   const maxBgWidth = natural ? natural.w * 2 : SIZE * ZOOM
-  const bgWidth = Math.max(SIZE * ZOOM, Math.min(SIZE * ZOOM * zoom, maxBgWidth))
+  const bgWidth = Math.max(SIZE * ZOOM, Math.min(scale * MAGNIFY_FACTOR, maxBgWidth))
   const bgHeight = natural ? bgWidth * (natural.h / natural.w) : SIZE * ZOOM
   const originX = (point.x / 100) * bgWidth
   const originY = (point.y / 100) * bgHeight
@@ -68,7 +81,7 @@ export default function Magnifier({
         style={
           variant === 'editing'
             ? { backgroundColor: color, borderColor: color, color: '#ffffff' }
-            : { backgroundColor: 'transparent', borderColor: color, color }
+            : { backgroundColor: '#ffffff', borderColor: color, color }
         }
       >
         {label}
