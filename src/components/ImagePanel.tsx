@@ -1444,7 +1444,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
-        className={`relative aspect-square w-full overflow-hidden rounded-lg border-4 bg-gray-100 select-none dark:bg-gray-900/60 ${
+        className={`relative aspect-square w-full overflow-hidden rounded-lg border-4 bg-white select-none ${
           allowCreate && image && !adjustMode ? 'ring-2 ring-offset-2 ring-amber-400 dark:ring-offset-gray-900' : ''
         }`}
         style={{ cursor, touchAction: adjustMode ? 'none' : 'auto', borderColor: FRAME_COLOR[slot] }}
@@ -1492,39 +1492,41 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                 clipPath: cropMode ? undefined : buildClipPath(cropMask),
               }}
             />
+          </div>
+        )}
 
+        {/* Linhas, bolinhas e números ficam numa camada própria, com tamanho e posição já em
+            pixels da tela (sem transform/contra-escala por cima da imagem). Assim o tamanho
+            deles é sempre o mesmo, a área de toque é exatamente o desenho, e a exportação
+            (que não resolve bem transforms aninhados) sai com tudo alinhado. */}
+        {image && baseSize.width > 0 && viewportSize.width > 0 && (
+          <div
+            className="pointer-events-none absolute"
+            style={{ left: -FRAME_BORDER, top: -FRAME_BORDER, width: viewportSize.width, height: viewportSize.height }}
+          >
             <svg
-              className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-              viewBox="0 0 100 100"
-              preserveAspectRatio="none"
+              className="absolute left-0 top-0"
+              width={viewportSize.width}
+              height={viewportSize.height}
+              style={{ overflow: 'visible' }}
             >
               {minutiae.map((m) => {
                 const coord = m[coordKey]
                 const offset = m[offsetKey]
                 if (!coord || (offset.x === 0 && offset.y === 0)) return null
+                const p = percentToLocal(coord)
+                const l = percentToLocal({ x: coord.x + offset.x, y: coord.y + offset.y })
                 return (
                   <g key={m.id}>
-                    <line
-                      x1={coord.x}
-                      y1={coord.y}
-                      x2={coord.x + offset.x}
-                      y2={coord.y + offset.y}
-                      stroke={NUMBER_COLOR}
-                      // O non-scaling-stroke só neutraliza o esticamento do viewBox; o zoom
-                      // (scale do CSS no palco) ainda engrossaria a linha — por isso a divisão,
-                      // para ela ter a mesma espessura na tela nas duas imagens, com qualquer zoom.
-                      strokeWidth={LINE_THICKNESS / geom.zoom}
-                      vectorEffect="non-scaling-stroke"
-                    />
+                    <line x1={p.x} y1={p.y} x2={l.x} y2={l.y} stroke={NUMBER_COLOR} strokeWidth={LINE_THICKNESS} />
                     {/* Área de toque invisível, só um pouco mais grossa que a linha, para arrastá-la. */}
                     <line
-                      x1={coord.x}
-                      y1={coord.y}
-                      x2={coord.x + offset.x}
-                      y2={coord.y + offset.y}
+                      x1={p.x}
+                      y1={p.y}
+                      x2={l.x}
+                      y2={l.y}
                       stroke="transparent"
-                      strokeWidth={LINE_HIT_THICKNESS / geom.zoom}
-                      vectorEffect="non-scaling-stroke"
+                      strokeWidth={LINE_HIT_THICKNESS}
                       onPointerDown={(e) => handleMarkerPointerDown(e, m.id, 'line')}
                       onPointerMove={handleMarkerPointerMove}
                       onPointerUp={handleMarkerPointerUp}
@@ -1546,54 +1548,39 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               if (!coord) return null
               const offset = m[offsetKey]
               const hasOffset = offset.x !== 0 || offset.y !== 0
-              const labelX = coord.x + offset.x
-              const labelY = coord.y + offset.y
-              const flipFactor = geom.flipped ? -1 : 1
-              // Cada marcador é um ponto sem tamanho (0x0) no palco, e só o desenho dele — que
-              // tem sempre o mesmo tamanho NA TELA (contra-escala do zoom) — recebe o mouse. Se a
-              // área de toque fosse a caixa no palco, ela cresceria junto com o zoom e "pegaria"
-              // cliques muito longe do marcador. Com origem no canto, o translate(-50%) centra.
-              const counterTransform = `scale(${1 / geom.zoom}) scaleX(${flipFactor}) rotate(${-geom.rotation}deg) translate(-50%, -50%)`
+              const p = percentToLocal(coord)
+              const l = percentToLocal({ x: coord.x + offset.x, y: coord.y + offset.y })
               const numberVisible = showNumbers && !m.hideNumber
               return (
                 <div key={m.id}>
                   {hasOffset && (
+                    // Área de toque: um pouquinho maior que a bolinha, e redonda como ela.
                     <div
                       onPointerDown={(e) => handleMarkerPointerDown(e, m.id, 'anchor')}
                       onPointerMove={handleMarkerPointerMove}
                       onPointerUp={handleMarkerPointerUp}
                       onPointerCancel={handleMarkerPointerUp}
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute"
+                      className="absolute flex items-center justify-center rounded-full"
                       style={{
-                        left: `${coord.x}%`,
-                        top: `${coord.y}%`,
-                        width: 0,
-                        height: 0,
+                        left: p.x - ANCHOR_HIT_SIZE / 2,
+                        top: p.y - ANCHOR_HIT_SIZE / 2,
+                        width: ANCHOR_HIT_SIZE,
+                        height: ANCHOR_HIT_SIZE,
+                        pointerEvents: 'auto',
                         cursor: adjustMode ? cursor : 'move',
                         touchAction: 'none',
                       }}
+                      title={`Minúcia do ponto ${displayId(m.id)} — arraste para mover só o ponto`}
                     >
-                      {/* Área de toque: um pouquinho maior que a bolinha, e redonda como ela. */}
                       <div
-                        className="absolute left-0 top-0 flex items-center justify-center rounded-full"
+                        className="rounded-full"
                         style={{
-                          width: ANCHOR_HIT_SIZE,
-                          height: ANCHOR_HIT_SIZE,
-                          transform: counterTransform,
-                          transformOrigin: '0 0',
+                          width: ANCHOR_DOT_SIZE,
+                          height: ANCHOR_DOT_SIZE,
+                          backgroundColor: ANCHOR_DOT_COLOR,
                         }}
-                        title={`Minúcia do ponto ${displayId(m.id)} — arraste para mover só o ponto`}
-                      >
-                        <div
-                          className="rounded-full"
-                          style={{
-                            width: ANCHOR_DOT_SIZE,
-                            height: ANCHOR_DOT_SIZE,
-                            backgroundColor: ANCHOR_DOT_COLOR,
-                          }}
-                        />
-                      </div>
+                      />
                     </div>
                   )}
                   <div
@@ -1602,34 +1589,25 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
                     onPointerUp={handleMarkerPointerUp}
                     onPointerCancel={handleMarkerPointerUp}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute"
+                    className="absolute flex items-center justify-center rounded-full shadow"
                     style={{
-                      left: `${labelX}%`,
-                      top: `${labelY}%`,
-                      width: 0,
-                      height: 0,
+                      left: l.x - MARKER_SIZE / 2,
+                      top: l.y - MARKER_SIZE / 2,
+                      width: MARKER_SIZE,
+                      height: MARKER_SIZE,
+                      pointerEvents: 'auto',
                       cursor: adjustMode ? cursor : arrowMode ? 'crosshair' : 'move',
                       touchAction: 'none',
+                      backgroundColor: DOT_COLOR,
+                      border: `2px solid ${NUMBER_COLOR}`,
+                      color: NUMBER_COLOR,
+                      fontFamily: 'Arial, Helvetica, sans-serif',
+                      fontWeight: 700,
+                      fontSize: MARKER_SIZE * 0.55,
                     }}
+                    title={`Ponto ${displayId(m.id)}`}
                   >
-                    <div
-                      className="absolute left-0 top-0 flex items-center justify-center rounded-full shadow"
-                      style={{
-                        width: MARKER_SIZE,
-                        height: MARKER_SIZE,
-                        transform: counterTransform,
-                        transformOrigin: '0 0',
-                        backgroundColor: DOT_COLOR,
-                        border: `2px solid ${NUMBER_COLOR}`,
-                        color: NUMBER_COLOR,
-                        fontFamily: 'Arial, Helvetica, sans-serif',
-                        fontWeight: 700,
-                        fontSize: MARKER_SIZE * 0.55,
-                      }}
-                      title={`Ponto ${displayId(m.id)}`}
-                    >
-                      {numberVisible ? displayId(m.id) : ''}
-                    </div>
+                    {numberVisible ? displayId(m.id) : ''}
                   </div>
                 </div>
               )
