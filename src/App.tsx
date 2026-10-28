@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
-import { Fingerprint, Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
+import { Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
 import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
 import ImagePanel, { SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
@@ -482,7 +482,31 @@ export default function App() {
   return (
     <div className="mx-auto flex min-h-screen max-w-[1900px] flex-col gap-4 p-4">
       <header className="flex items-center gap-2">
-        <Fingerprint className="text-blue-600" size={28} />
+        {/* Logo: digital com uma lupa por cima, no canto inferior direito. */}
+        <svg
+          width={36}
+          height={36}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="shrink-0 text-blue-600"
+          aria-hidden="true"
+        >
+          <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
+          <path d="M14 13.12c0 2.38 0 6.38-1 8.88" />
+          <path d="M17.29 21.02c.12-.6.43-2.3.5-3.02" />
+          <path d="M2 12a10 10 0 0 1 18-6" />
+          <path d="M2 16h.01" />
+          <path d="M21.8 16c.2-2 .131-5.354 0-6" />
+          <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+          <path d="M8.65 22c.21-.66.45-1.32.57-2" />
+          <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
+          <circle cx="16.5" cy="16.5" r="4.6" className="fill-white dark:fill-gray-900" />
+          <path d="m20 20 3 3" />
+        </svg>
         <div className="flex-1">
           <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
             MAIA <span className="font-medium text-gray-500 dark:text-gray-400">— Módulo de Análise e Identificação Aplicada</span>
