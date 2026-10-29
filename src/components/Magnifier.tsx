@@ -25,6 +25,7 @@ interface MagnifierProps {
 export const MAGNIFIER_SIZE = 205
 export const MAGNIFIER_HEIGHT = 236
 const SIZE = MAGNIFIER_SIZE
+const BORDER = 4 // border-4 do círculo
 const ZOOM = 3.2
 // Quanto a lupa amplia em relação ao que já aparece no quadro.
 const MAGNIFY_FACTOR = 1.25
@@ -62,15 +63,18 @@ export default function Magnifier({
   const natural = naturalProp ?? probed
 
   // A lupa acompanha o zoom do quadro (senão, numa página inteira de prontuário, o dedo
-  // ficaria minúsculo nela), mas sem passar de 2x a resolução real da imagem — acima
-  // disso não há mais detalhe para mostrar, só um elemento gigante e pesado.
-  const maxBgWidth = natural ? natural.w * 2 : SIZE * ZOOM
+  // ficaria minúsculo nela), mas sem passar de 6x a resolução real da imagem (e de 16000px) —
+  // acima disso não há mais detalhe para mostrar. Como só o círculo é desenhado, ampliar
+  // bastante não custa memória.
+  const maxBgWidth = natural ? Math.min(natural.w * 6, 16000) : SIZE * ZOOM
   const bgWidth = Math.max(SIZE * ZOOM, Math.min(scale * MAGNIFY_FACTOR, maxBgWidth))
   const bgHeight = natural ? bgWidth * (natural.h / natural.w) : SIZE * ZOOM
   const originX = (point.x / 100) * bgWidth
   const originY = (point.y / 100) * bgHeight
-  const bgLeft = SIZE / 2 - originX
-  const bgTop = SIZE / 2 - originY
+  // O ponto fica no centro da ÁREA INTERNA do círculo (sem a borda de 4px) — o mesmo centro da
+  // mira desenhada por cima.
+  const inner = SIZE - 2 * BORDER
+  const center = inner / 2
 
   // A cor é sempre a do quadro da imagem (A vermelho, B azul); o rótulo cheio indica
   // qual lado está sendo editado e o rótulo vazado, o de referência.
@@ -92,17 +96,20 @@ export default function Magnifier({
       >
         <div
           style={{
+            // Só a área do círculo, com a imagem ampliada como fundo posicionado: não cria uma
+            // camada gigante (numa página de PDF ela passava de 10.000px e podia sair errada).
+            // O ponto está no centro dela, então girar/espelhar em torno do centro é girar/espelhar
+            // em torno do próprio ponto marcado.
             position: 'absolute',
-            width: bgWidth,
-            height: bgHeight,
-            left: bgLeft,
-            top: bgTop,
+            left: 0,
+            top: 0,
+            width: inner,
+            height: inner,
             backgroundImage: `url(${image})`,
-            backgroundSize: '100% 100%',
-            // O pivô precisa ser o próprio ponto marcado (em coordenadas locais do
-            // elemento), não o centro padrão do elemento — senão espelhar/girar desloca
-            // o ponto para fora do centro da lupa.
-            transformOrigin: `${originX}px ${originY}px`,
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: `${bgWidth}px ${bgHeight}px`,
+            backgroundPosition: `${center - originX}px ${center - originY}px`,
+            transformOrigin: '50% 50%',
             transform: `rotate(${rotation}deg) scaleX(${flipped ? -1 : 1})`,
             filter:
               [inverted ? 'invert(1)' : null, ...buildLevelsFilterParts(levelsBlack, darken, lighten)]

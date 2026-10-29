@@ -330,8 +330,11 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const recomputeBaseSize = useCallback(() => {
     const vp = viewportRef.current
     if (!vp) return
-    const vw = vp.offsetWidth
-    const vh = vp.offsetHeight
+    // Tamanho exato (fracionário), não o arredondado do offsetWidth: o erro de meio pixel
+    // seria multiplicado pelo zoom e desalinharia os marcadores da imagem (e a lupa).
+    const rect = vp.getBoundingClientRect()
+    const vw = rect.width
+    const vh = rect.height
     setViewportSize({ width: vw, height: vh })
     const nat = naturalSizeRef.current
     if (!nat) return
@@ -414,14 +417,11 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   const panXpx = (transform.panX / 100) * baseSize.width
   const panYpx = (transform.panY / 100) * baseSize.height
 
-  // Geometria da imagem no quadro (ver Geometry). Em modo de recorte a imagem inteira aparece
-  // sem zoom/pan e sem o recorte já aplicado, para poder escolher qualquer área dela.
-  const geom = computeGeometry(
-    baseSize,
-    viewportSize,
-    cropMode ? { ...transform, zoom: 1, panX: 0, panY: 0 } : transform,
-    cropMode ? null : cropMask,
-  )
+  // Geometria da imagem no quadro (ver Geometry). Em modo de recorte a visão continua EXATAMENTE
+  // a mesma (zoom, posição, giro e enquadramento do recorte atual): o recorte novo é escolhido
+  // em cima do que está na tela. Só o clip do recorte já aplicado fica suspenso (ver JSX), para
+  // a imagem ao redor aparecer e poder ser incluída (com a roda do mouse dá pra afastar o zoom).
+  const geom = computeGeometry(baseSize, viewportSize, transform, cropMask)
 
   const ghostScale =
     otherNatural && viewportSize.width > 0
@@ -506,15 +506,11 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
   }
 
-  // Recorte não-destrutivo: abrir a ferramenta sempre mostra a imagem ORIGINAL inteira
-  // (o clip-path do recorte já aplicado fica suspenso enquanto cropMode é true, ver JSX),
-  // então a parte que tinha sido recortada antes volta a aparecer e pode ser reincluída
-  // livremente. Se já havia um recorte, a seleção começa exatamente onde ele estava.
+  // Recorte não-destrutivo: abrir a ferramenta mantém a visão atual (zoom, posição, giro) e
+  // suspende o clip do recorte já aplicado (ver JSX), então a parte recortada antes volta a
+  // aparecer e pode ser reincluída. Se já havia um recorte, a seleção começa onde ele estava.
   function startCrop() {
-    // Em modo de recorte a imagem aparece inteira, sem zoom/pan (ver geom): a seleção
-    // anterior é posicionada nessa mesma visão.
-    const cropGeom = computeGeometry(baseSize, viewportSize, { ...transform, zoom: 1, panX: 0, panY: 0 }, null)
-    const localPoints = cropMask?.points.map((p) => geometryPercentToLocal(cropGeom, p)) ?? null
+    const localPoints = cropMask?.points.map(percentToLocal) ?? null
     const rect = localPoints ? rectFromAxisAlignedPoints(localPoints) : null
     if (rect) {
       setCropShape('square')
@@ -1067,9 +1063,9 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
               <span className="text-gray-400 dark:text-gray-500">
                 {cropShape === 'square'
                   ? keepSquare
-                    ? 'Arraste um canto ou o meio de um lado pra aumentar ou diminuir o quadrado, ou o centro pra mover.'
-                    : 'Arraste um canto ou o meio de um lado pra ajustar só aquele lado, ou o centro pra mover.'
-                  : 'Desenhe o contorno do recorte clicando e arrastando o mouse sobre a imagem.'}
+                    ? 'Arraste um canto ou o meio de um lado pra aumentar ou diminuir o quadrado, ou o centro pra mover. Roda do mouse dá zoom e arrastar fora da seleção move a imagem.'
+                    : 'Arraste um canto ou o meio de um lado pra ajustar só aquele lado, ou o centro pra mover. Roda do mouse dá zoom e arrastar fora da seleção move a imagem.'
+                  : 'Desenhe o contorno do recorte clicando e arrastando o mouse sobre a imagem. Roda do mouse dá zoom.'}
               </span>
               <button
                 onClick={cancelCrop}
@@ -1645,7 +1641,6 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             className="absolute"
             // Mesma origem das contas do recorte (canto da borda do quadro), não da área interna.
             style={{ left: -FRAME_BORDER, top: -FRAME_BORDER, width: viewportSize.width, height: viewportSize.height }}
-            onPointerDown={(e) => e.stopPropagation()}
             onPointerMove={handleCropPointerMove}
             onPointerUp={handleCropPointerUp}
             onPointerCancel={handleCropPointerUp}
