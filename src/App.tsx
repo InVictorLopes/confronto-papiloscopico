@@ -482,17 +482,17 @@ export default function App() {
   return (
     <div className="mx-auto flex min-h-screen max-w-[1900px] flex-col gap-4 p-4">
       <header className="flex items-center gap-2">
-        {/* Logo: digital com uma lupa por cima, no canto inferior direito. */}
+        {/* Logo: digital azul com uma lupa dourada por cima, no canto inferior direito. */}
         <svg
-          width={36}
-          height={36}
+          width={44}
+          height={44}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="shrink-0 text-blue-600"
+          className="h-9 w-9 shrink-0 text-blue-600 md:h-11 md:w-11"
           aria-hidden="true"
         >
           <path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4" />
@@ -504,34 +504,39 @@ export default function App() {
           <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
           <path d="M8.65 22c.21-.66.45-1.32.57-2" />
           <path d="M9 6.8a6 6 0 0 1 9 5.2v2" />
-          <circle cx="16.5" cy="16.5" r="4.6" className="fill-white dark:fill-gray-900" />
-          <path d="m20 20 3 3" />
+          <defs>
+            <linearGradient id="minutia-gold" gradientUnits="userSpaceOnUse" x1="11" y1="11" x2="23" y2="23">
+              <stop offset="0" stopColor="#f3d36b" />
+              <stop offset="0.55" stopColor="#c99a1e" />
+              <stop offset="1" stopColor="#94680f" />
+            </linearGradient>
+          </defs>
+          <circle cx="16" cy="16" r="5.2" stroke="url(#minutia-gold)" strokeWidth={1.7} className="fill-white/85 dark:fill-gray-900/85" />
+          <path d="M13.6 16.2a2.6 2.6 0 0 1 2-2.5" stroke="#f3d36b" strokeWidth={1.1} />
+          <path d="m20 20 3 3" stroke="url(#minutia-gold)" strokeWidth={2.8} />
         </svg>
-        <div className="flex-1">
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-            MAIA <span className="font-medium text-gray-500 dark:text-gray-400">— Módulo de Análise e Identificação Aplicada</span>
-          </h1>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Processamento 100% local — nenhuma imagem é enviada a servidores
-          </p>
-        </div>
+        <h1 className="flex-1 font-minutia text-2xl font-bold tracking-[0.14em] md:text-3xl md:tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-br from-[#e6bf4a] via-[#c99a1e] to-[#8f6410]">
+          MINUTIA
+        </h1>
         <a
           href={MANUAL_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+          className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-md bg-white text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 md:h-auto md:w-auto md:px-3 md:py-2 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
           title="Abrir o manual de uso"
+          aria-label="Dúvidas — abrir o manual de uso"
         >
-          <HelpCircle size={18} />
-          Dúvidas
+          <HelpCircle size={20} />
+          <span className="hidden md:inline">Dúvidas</span>
         </a>
         <button
           onClick={toggleTheme}
-          className="flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+          className="flex h-10 w-10 items-center justify-center gap-1.5 rounded-md bg-white text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 md:h-auto md:w-auto md:px-3 md:py-2 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
           title={theme === 'dark' ? 'Mudar para o modo claro' : 'Mudar para o modo escuro'}
+          aria-label={theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          {theme === 'dark' ? 'Modo claro' : 'Modo escuro'}
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          <span className="hidden md:inline">{theme === 'dark' ? 'Modo claro' : 'Modo escuro'}</span>
         </button>
       </header>
 
@@ -651,10 +656,10 @@ export default function App() {
         />
       </div>
 
-      <div className="flex flex-col gap-3 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:flex-row sm:items-center sm:flex-wrap">
+      <div className="grid grid-cols-2 gap-2 rounded-lg bg-white p-3 text-sm shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:flex sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
         <button
           onClick={() => setShowNumbers((v) => !v)}
-          className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
+          className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-xs font-medium shadow-sm ring-1 sm:justify-start sm:gap-1 sm:py-1 ${
             showNumbers
               ? 'bg-blue-600 text-white ring-blue-600'
               : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
@@ -667,7 +672,7 @@ export default function App() {
 
         <button
           onClick={() => setArrowMode((v) => !v)}
-          className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium shadow-sm ring-1 ${
+          className={`flex items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-xs font-medium shadow-sm ring-1 sm:justify-start sm:gap-1 sm:py-1 ${
             arrowMode
               ? 'bg-blue-600 text-white ring-blue-600'
               : 'bg-white text-gray-600 ring-gray-300 hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600'
@@ -679,7 +684,7 @@ export default function App() {
         </button>
 
         {arrowMode && (
-          <span className="text-xs text-amber-600 dark:text-amber-400">
+          <span className="col-span-2 text-center text-xs text-amber-600 sm:col-auto sm:text-left dark:text-amber-400">
             Marcação de novos pontos travada — desligue o modo linha para marcar.
           </span>
         )}
@@ -692,6 +697,13 @@ export default function App() {
         onDelete={handleDelete}
         onToggleNumber={handleToggleNumber}
       />
+
+      <footer className="mt-auto border-t border-gray-200 pt-3 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+        <p className="font-semibold text-gray-600 dark:text-gray-300">
+          MINUTIA - Sistema de Processamento de Pontos Característicos
+        </p>
+        <p>Processamento 100% local — nenhuma imagem é enviada a servidores</p>
+      </footer>
     </div>
   )
 }

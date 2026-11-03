@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Manual do MAIA — Módulo de Análise e Identificação Aplicada</title>
+<title>Manual do MINUTIA — Sistema de Processamento de Pontos Característicos</title>
 <meta name="description" content="Guia de referência para carregar imagens, marcar pontos, ajustar e exportar confrontos papiloscópicos." />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2324456f' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4'/%3E%3Cpath d='M14 13.12c0 2.38 0 6.38-1 8.88'/%3E%3Cpath d='M17.29 21.02c.12-.6.43-2.3.5-3.02'/%3E%3Cpath d='M2 12a10 10 0 0 1 18-6'/%3E%3Cpath d='M2 16h.01'/%3E%3Cpath d='M21.8 16c.2-2 .131-5.354 0-6'/%3E%3Cpath d='M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2'/%3E%3Cpath d='M8.65 22c.21-.66.45-1.32.57-2'/%3E%3Cpath d='M9 6.8a6 6 0 0 1 9 5.2v2'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -495,7 +495,7 @@
       <path d="M9 6.8a6 6 0 0 1 9 5.2v2"/>
     </svg>
     <div class="eyebrow">Manual de uso</div>
-    <h1>MAIA — Módulo de Análise e Identificação Aplicada</h1>
+    <h1>MINUTIA — Sistema de Processamento de Pontos Característicos</h1>
     <p class="lede">Guia de referência para marcar, comparar e exportar confrontos de impressões digitais — Imagem Questionada contra Imagem Padrão, direto no navegador.</p>
 
     <div class="fichario">
@@ -520,13 +520,15 @@
       <a href="#carregar"><span class="num">02</span>Carregar imagens</a>
       <a href="#marcar"><span class="num">03</span>Marcar pontos</a>
       <a href="#ajustar"><span class="num">04</span>Ajustar a imagem</a>
-      <a href="#molde"><span class="num">05</span>O molde</a>
-      <a href="#lupas"><span class="num">06</span>Lupas de precisão</a>
-      <a href="#aparencia"><span class="num">07</span>Aparência dos pontos</a>
-      <a href="#exportar"><span class="num">08</span>Exportar</a>
-      <a href="#edicao"><span class="num">09</span>Salvar e reabrir</a>
-      <a href="#tema"><span class="num">10</span>Tema e privacidade</a>
-      <a href="#referencia"><span class="num">11</span>Referência rápida</a>
+      <a href="#recorte"><span class="num">05</span>Recortar</a>
+      <a href="#molde"><span class="num">06</span>O molde</a>
+      <a href="#lupas"><span class="num">07</span>Lupas de precisão</a>
+      <a href="#aparencia"><span class="num">08</span>Aparência dos pontos</a>
+      <a href="#abas"><span class="num">09</span>Abas de confronto</a>
+      <a href="#exportar"><span class="num">10</span>Exportar</a>
+      <a href="#edicao"><span class="num">11</span>Salvar e reabrir</a>
+      <a href="#tema"><span class="num">12</span>Tema, celular e privacidade</a>
+      <a href="#referencia"><span class="num">13</span>Referência rápida</a>
     </nav>
 
     <main>
@@ -547,14 +549,14 @@
       <section id="carregar">
         <div class="sec-head"><span class="sec-num">02</span><h2>Carregar as imagens</h2></div>
         <p class="lead">As duas imagens sempre aparecem no mesmo quadro <strong>quadrado</strong>, não importa a resolução ou proporção do arquivo original — a Questionada dentro de uma caixinha vermelha, a Padrão dentro de uma azul.</p>
-        <p>Clique em qualquer um dos dois quadros (ou no botão <span class="chip">Carregar imagem</span> / <span class="chip">Trocar imagem</span> no canto de cada painel) para escolher um arquivo do seu computador. Antes de carregar, o quadro mostra um ícone de impressão digital como espaço reservado.</p>
+        <p>Clique em qualquer um dos dois quadros (ou no botão <span class="chip">Carregar imagem</span> / <span class="chip">Trocar imagem</span> no canto de cada painel) para escolher um arquivo do seu computador. Antes de carregar, o quadro mostra um ícone de impressão digital como espaço reservado; depois de carregada, a imagem aparece sobre fundo branco.</p>
 
         <h3>Carregar um PDF</h3>
         <p>Além de imagens (JPG, PNG etc.), os quadros aceitam <strong>PDF</strong> — por exemplo, o prontuário digitalizado. A página é convertida em imagem a <strong>600&nbsp;dpi</strong>, a mesma resolução usada na digitalização, para as cristas manterem o detalhe ao dar zoom. Se o PDF tiver mais de uma página, o sistema pergunta qual delas usar; basta digitar o número da página (cancelar desiste do carregamento).</p>
-        <p>Não é mais preciso converter o prontuário para JPG no Photoshop antes — o PDF pode ser carregado direto.</p>
+        <p>O PDF é carregado direto, sem precisar convertê-lo para imagem em outro programa.</p>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
-          <div><strong>Trocar imagem</strong> apaga todos os pontos marcados nesse confronto — as posições antigas não fazem mais sentido numa foto diferente. A marcação recomeça do zero.</div>
+          <div><strong>Trocar imagem</strong> apaga todos os pontos marcados nesse confronto — as posições marcadas pertencem à foto carregada e não servem para outra imagem. A marcação recomeça do zero.</div>
         </div>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
@@ -619,7 +621,7 @@
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>Rotação</h4>
-            <p>Controle deslizante de −180° a 180°, ou 90° de cada vez com os botões das pontas. O botão <span class="chip">Girar na foto</span> liga um modo em que arrastar dentro da própria imagem gira ela livremente, com a mão no leme em vez do controle deslizante.</p>
+            <p>Controle deslizante de −180° a 180°, ou 90° de cada vez com os botões das pontas. O botão com ícone de mão liga o modo <strong>Girar na foto</strong>: arrastar dentro da própria imagem gira ela livremente, em vez de usar o controle deslizante (enquanto ele estiver ligado, o arraste não move a imagem).</p>
           </div>
           <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M8 3v18M16 3v18"/><path d="M3 8l3-3-3-3M21 8l-3-3 3-3" transform="translate(0,3)"/></svg>Espelhar</h4>
@@ -642,35 +644,53 @@
             <p>O inverso do Escurecer: deixa a foto inteira mais clara por igual (até 3x) — o ajuste certo quando a imagem está escura demais. Pode ser combinado com os outros níveis.</p>
           </div>
           <div class="card">
+            <h4><svg class="icon" viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14M18 22V8a2 2 0 0 0-2-2H2"/></svg>Recortar</h4>
+            <p>Deixa só a parte da imagem que interessa, sem alterar o original. Veja a próxima seção.</p>
+          </div>
+          <div class="card">
             <h4><svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>Redefinir</h4>
-            <p>Volta zoom, rotação, espelhamento e níveis desse lado ao estado original.</p>
+            <p>Volta posição, zoom, rotação, espelhamento e níveis desse lado ao padrão. O recorte tem o próprio botão de reverter.</p>
           </div>
         </div>
-        <div class="callout">
-          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
-          <div><strong>Ponto preto</strong>, <strong>Escurecer</strong> e <strong>Clarear</strong> substituíram o antigo controle de "Contraste": o contraste puro sempre estica os tons em torno do cinza-médio, e por isso podia estourar pra branco (sumindo linhas) em imagens já claras/apagadas. Os novos controles resolvem isso com um ponto de referência ajustável.</div>
-        </div>
 
-        <p style="margin-top:1.1rem">Todo controle numérico tem um campinho ao lado do slider — dá pra arrastar <em>ou</em> digitar o valor exato.</p>
+        <p style="margin-top:1.1rem">Arraste a imagem para movê-la dentro do quadro. Todo controle numérico tem um campo ao lado do controle deslizante: dá para arrastar <em>ou</em> digitar o valor exato. Ponto preto, Escurecer e Clarear vão de 0 a 254 e podem ser combinados.</p>
+        <p>Cada controle de nível tem uma função própria: <strong>Ponto preto</strong> trabalha só nas sombras (o branco não muda), enquanto <strong>Escurecer</strong> e <strong>Clarear</strong> mudam a foto inteira por igual. Assim dá para reforçar a tinta fraca de uma digital clara sem estourar as cristas para o branco.</p>
+      </section>
+
+      <section id="recorte">
+        <div class="sec-head"><span class="sec-num">05</span><h2>Recortar</h2></div>
+        <p class="lead">Com o ajuste aberto, <span class="chip">Recortar</span> deixa visível só a área que interessa — o original nunca é alterado.</p>
+        <p>O recorte parte do <strong>zoom e da posição atuais</strong> da imagem: se você ampliou uma região antes de recortar, é essa região que aparece para recortar. Durante o recorte, a roda do mouse dá zoom e arrastar fora da seleção move a imagem.</p>
+
+        <h3>Duas formas de recorte</h3>
+        <ul>
+          <li><strong>Quadrado</strong> — arraste um canto, o meio de um lado ou o centro (para mover a seleção). Com <span class="chip">Manter quadrado</span> ligado (padrão), a seleção continua um quadrado ao mexer nos cantos e nos lados; desligado, cada lado se move separadamente.</li>
+          <li><strong>Livre</strong> — desenhe o contorno clicando e arrastando o mouse sobre a imagem, para recortar um formato qualquer.</li>
+        </ul>
+
+        <h3>Aplicar, ajustar e reverter</h3>
+        <p><span class="chip">Aplicar recorte</span> confirma; <span class="chip">Cancelar</span> desiste sem mudar nada. Depois de aplicado, o quadro mostra só a área recortada, enquadrada para preencher o espaço, e a exportação também sai recortada.</p>
+        <p>Para refinar, clique em <span class="chip">Recortar</span> de novo: a imagem inteira, inclusive a parte já recortada, continua disponível. O botão de seta ao lado volta a mostrar a imagem inteira, sem nenhum recorte.</p>
+        <p>O recorte é guardado junto com os pontos e os ajustes ao salvar a edição.</p>
       </section>
 
       <section id="molde">
-        <div class="sec-head"><span class="sec-num">05</span><h2>O molde</h2></div>
+        <div class="sec-head"><span class="sec-num">06</span><h2>O molde</h2></div>
         <p class="lead">Com o ajuste aberto, o botão <span class="chip">Molde</span> sobrepõe a <em>outra</em> imagem, semitransparente, por cima da que você está ajustando.</p>
         <p>Assim dá para alinhar visualmente as duas digitais — corrigir enquadramento, rotação ou zoom de um lado enquanto compara diretamente com o outro.</p>
-        <p>O molde vem <strong>desligado</strong> por padrão: clique em <span class="chip">Molde</span> para ligar quando precisar, e de novo para desligar se ele atrapalhar a visualização.</p>
+        <p>O molde vem <strong>desligado</strong> por padrão: clique em <span class="chip">Molde</span> para ligar quando precisar, e de novo para desligar se ele atrapalhar a visualização. O botão só aparece quando a outra imagem já foi carregada.</p>
       </section>
 
       <section id="lupas">
-        <div class="sec-head"><span class="sec-num">06</span><h2>Lupas de precisão</h2></div>
-        <p class="lead">Ao começar a arrastar qualquer ponto, duas lentes de aumento aparecem logo acima dos dois quadros de imagem.</p>
-        <p>Esse espaço acima dos quadros fica sempre reservado (com um aviso tracejado quando nenhuma lupa está aberta), então abrir ou fechar as lupas não empurra os quadros para baixo durante a marcação.</p>
-        <p>A da esquerda mostra sempre a <strong>Imagem&nbsp;A</strong>, com borda <strong>vermelha</strong>; a da direita sempre a <strong>Imagem&nbsp;B</strong>, com borda <strong>azul</strong> — as mesmas cores dos quadros. O rótulo cheio (“Editando”) indica o lado que você está arrastando; o rótulo só com contorno (“Referência”) é o outro lado, para comparar a minúcia enquanto você posiciona.</p>
-        <p>As duas respeitam a rotação, o espelhamento, a inversão de cor, os níveis e o zoom já aplicados naquele lado — num prontuário ampliado, a lupa amplia junto. Somem sozinhas assim que você solta o ponto.</p>
+        <div class="sec-head"><span class="sec-num">07</span><h2>Lupas de precisão</h2></div>
+        <p class="lead">Ao começar a arrastar um ponto, uma lupa flutuante aparece sobre cada quadro, perto do ponto, para você posicioná-lo com precisão.</p>
+        <p>A lupa fica sempre do lado oposto ao ponto dentro do quadro (abaixo dele quando o ponto está na metade de cima, e acima quando está na de baixo), de modo que nunca cobre o que você está ajustando. Ela acompanha o ponto enquanto você arrasta e some assim que você solta.</p>
+        <p>Cada quadro tem a sua: a da <strong>Imagem&nbsp;A</strong> com borda <strong>vermelha</strong> e a da <strong>Imagem&nbsp;B</strong> com borda <strong>azul</strong> — as mesmas cores dos quadros. O rótulo <strong>Editando</strong> indica o lado que você está arrastando; o rótulo <strong>Referência</strong> é o outro lado, no ponto correspondente, para comparar a minúcia enquanto você posiciona. Se o ponto ainda não existe no outro lado, só a lupa do lado arrastado aparece.</p>
+        <p>As lupas respeitam a rotação, o espelhamento, o negativo, os níveis e o zoom já aplicados naquele lado — numa página de PDF ampliada, a lupa amplia junto.</p>
       </section>
 
       <section id="aparencia">
-        <div class="sec-head"><span class="sec-num">07</span><h2>Aparência dos pontos</h2></div>
+        <div class="sec-head"><span class="sec-num">08</span><h2>Aparência dos pontos</h2></div>
         <p class="lead">A marcação segue um padrão fixo, igual em todo confronto — pensado pra ficar consistente entre laudos, então não dá pra mudar cor, tamanho ou espessura.</p>
 
         <h3>Bolinha branca, número vermelho</h3>
@@ -685,8 +705,20 @@
         <p>Enquanto o modo linha estiver ligado, a <strong>marcação de novos pontos fica travada</strong> — clicar na imagem não cria ponto, só arrastar os números existentes. Um aviso ao lado do botão lembra disso; desligue o modo linha para voltar a marcar.</p>
       </section>
 
+      <section id="abas">
+        <div class="sec-head"><span class="sec-num">09</span><h2>Abas de confronto</h2></div>
+        <p class="lead">Cada aba guarda um confronto independente: as duas imagens, os pontos, o recorte e os ajustes.</p>
+        <p>As abas ficam logo abaixo do cabeçalho. Trocar de aba nunca descarta o que foi feito nas outras, então dá para conduzir vários confrontos ao mesmo tempo.</p>
+        <ul>
+          <li><span class="chip">+</span> cria uma aba nova, vazia, com o nome “Confronto N” (o menor número ainda livre).</li>
+          <li><strong>Clique</strong> numa aba para abri-la; <strong>duplo clique</strong> (ou o ícone de lápis, no computador) para renomeá-la.</li>
+          <li><strong>×</strong> fecha a aba, depois de pedir confirmação — o trabalho feito nela é perdido. A última aba aberta não pode ser fechada.</li>
+        </ul>
+        <p>Exportar, <span class="chip">Salvar edição</span> e <span class="chip">Abrir edição</span> sempre atuam na aba ativa.</p>
+      </section>
+
       <section id="exportar">
-        <div class="sec-head"><span class="sec-num">08</span><h2>Exportar o confronto</h2></div>
+        <div class="sec-head"><span class="sec-num">10</span><h2>Exportar o confronto</h2></div>
         <p class="lead">O botão <span class="chip">Exportar Confronto</span> fica sempre visível, mas só libera quando existe ao menos um par completo.</p>
         <p>Ao clicar, abre uma caixa com quatro opções, todas marcadas por padrão — desmarque as que não quiser:</p>
         <div class="grid-cards">
@@ -705,10 +737,10 @@
       </section>
 
       <section id="edicao">
-        <div class="sec-head"><span class="sec-num">09</span><h2>Salvar e reabrir a edição</h2></div>
+        <div class="sec-head"><span class="sec-num">11</span><h2>Salvar e reabrir a edição</h2></div>
         <p class="lead">Pensado para corrigir um confronto depois — por exemplo, após a revisão do laudo.</p>
-        <p><span class="chip">Salvar edição</span>, no topo da tela, gera um arquivo <code>.json</code> com as duas imagens, todos os pontos e todos os ajustes (zoom, rotação, níveis etc.) daquele confronto — pede um nome antes de baixar, do mesmo jeito que a exportação de imagens.</p>
-        <p><span class="chip">Abrir edição</span> carrega esse arquivo de volta, exatamente como estava: as imagens, os pontos e os ajustes voltam tudo ao lugar, prontos para corrigir e exportar de novo.</p>
+        <p><span class="chip">Salvar edição</span>, no topo da tela, gera um arquivo <code>.json</code> com as duas imagens, todos os pontos, os recortes e todos os ajustes (zoom, rotação, níveis etc.) do confronto da aba ativa — pede um nome antes de baixar, do mesmo jeito que a exportação de imagens.</p>
+        <p><span class="chip">Abrir edição</span> carrega esse arquivo na aba ativa, no lugar do que estiver nela, exatamente como foi salvo: imagens, pontos, recortes e ajustes voltam ao lugar, prontos para corrigir e exportar de novo. Se o arquivo não for uma edição válida, o sistema avisa.</p>
         <div class="callout">
           <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
           <div>O <code>.json</code> da edição não é o mesmo arquivo que o <code>.jpg</code> exportado — guarde-o à parte se quiser poder reabrir e corrigir esse confronto mais tarde.</div>
@@ -716,13 +748,14 @@
       </section>
 
       <section id="tema">
-        <div class="sec-head"><span class="sec-num">10</span><h2>Tema e privacidade</h2></div>
-        <p class="lead">O botão <span class="chip">Modo escuro</span> / <span class="chip">Modo claro</span>, no canto superior direito, alterna entre os dois temas — a escolha fica salva no navegador.</p>
-        <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
+        <div class="sec-head"><span class="sec-num">12</span><h2>Tema, celular e privacidade</h2></div>
+        <p class="lead">No canto superior direito ficam dois botões: <span class="chip">?</span> abre este manual, e o de <strong>sol/lua</strong> alterna entre os modos claro e escuro — a escolha fica salva no navegador.</p>
+        <p>No computador o botão de tema mostra também o texto <span class="chip">Modo escuro</span> / <span class="chip">Modo claro</span>. Em telas pequenas, como a do celular, os quadros ficam um abaixo do outro, os botões de ajuda e de tema aparecem só com o ícone, e <span class="chip">Desfazer</span>, <span class="chip">Abrir</span> e <span class="chip">Salvar</span> formam uma fileira acima do botão <span class="chip">Exportar Confronto</span>.</p>
+        <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba do navegador, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
       </section>
 
       <section id="referencia">
-        <div class="sec-head"><span class="sec-num">11</span><h2>Referência rápida</h2></div>
+        <div class="sec-head"><span class="sec-num">13</span><h2>Referência rápida</h2></div>
         <p class="lead">Todos os controles, num só lugar.</p>
         <div class="ref-scroll">
           <table class="ref">
@@ -732,11 +765,13 @@
             <tbody>
               <tr><td class="chip">Carregar imagem</td><td>Painel A / B</td><td>Escolhe a imagem ou o PDF local</td></tr>
               <tr><td class="chip">Trocar imagem</td><td>Painel A / B</td><td>Troca a foto e apaga os pontos marcados</td></tr>
-              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom (até 5000%), rotação, espelhar, negativo, níveis</td></tr>
-              <tr><td class="chip">Girar na foto</td><td>Barra de ajuste</td><td>Arrastar dentro da imagem gira ela livremente</td></tr>
+              <tr><td class="chip">Ajustar imagem</td><td>Painel A / B</td><td>Abre zoom (50% a 5000%), rotação, espelhar, negativo, níveis e recorte</td></tr>
+              <tr><td class="chip">Girar na foto (ícone de mão)</td><td>Barra de ajuste</td><td>Arrastar dentro da imagem gira ela livremente</td></tr>
               <tr><td class="chip">Ponto preto</td><td>Barra de ajuste</td><td>Escurece as sombras e aumenta o contraste</td></tr>
               <tr><td class="chip">Escurecer</td><td>Barra de ajuste</td><td>Escurece a foto inteira, por igual</td></tr>
               <tr><td class="chip">Clarear</td><td>Barra de ajuste</td><td>Clareia a foto inteira, por igual</td></tr>
+              <tr><td class="chip">Recortar</td><td>Barra de ajuste</td><td>Recorta em quadrado ou em formato livre, sem alterar o original</td></tr>
+              <tr><td class="chip">Reverter recorte (seta)</td><td>Barra de ajuste</td><td>Volta a mostrar a imagem inteira</td></tr>
               <tr><td class="chip">Molde</td><td>Barra de ajuste</td><td>Sobrepõe a outra imagem, semitransparente (vem desligado)</td></tr>
               <tr><td class="chip">Redefinir</td><td>Barra de ajuste</td><td>Zera zoom, rotação, espelhamento e níveis</td></tr>
               <tr><td class="chip">Desfazer último ponto</td><td>Barra de status</td><td>Remove o ponto mais recente</td></tr>
@@ -749,14 +784,16 @@
               <tr><td>Setinhas ▲ / ▼</td><td>Tabela de pontos</td><td>Move aquele ponto para cima/baixo na lista</td></tr>
               <tr><td>Ícone de olho</td><td>Tabela de pontos</td><td>Oculta o número de um ponto específico</td></tr>
               <tr><td>Ícone de lixeira</td><td>Tabela de pontos</td><td>Exclui aquele par (o número fica livre pro próximo)</td></tr>
-              <tr><td class="chip">Modo escuro / Modo claro</td><td>Cabeçalho</td><td>Alterna entre os temas escuro e claro</td></tr>
+              <tr><td class="chip">+ / ×</td><td>Abas</td><td>Cria um confronto novo / fecha a aba (com confirmação)</td></tr>
+              <tr><td class="chip">?</td><td>Cabeçalho</td><td>Abre este manual</td></tr>
+              <tr><td class="chip">Sol / lua</td><td>Cabeçalho</td><td>Alterna entre os temas claro e escuro</td></tr>
             </tbody>
           </table>
         </div>
       </section>
 
       <footer>
-        Confronto Papiloscópico é uma ferramenta de código aberto, executada inteiramente no navegador. Dúvidas ou sugestões de ajuste ficam com quem mantém o repositório.
+        MINUTIA — Sistema de Processamento de Pontos Característicos. Executado inteiramente no navegador: nenhuma imagem é enviada a servidores.
       </footer>
 
     </main>

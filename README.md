@@ -1,4 +1,4 @@
-# MAIA — Módulo de Análise e Identificação Aplicada
+# MINUTIA — Sistema de Processamento de Pontos Característicos
 
 Ferramenta web para auxiliar no confronto (comparação) de impressões digitais entre uma **Imagem Questionada** e uma **Imagem Padrão**. Todo o processamento acontece no navegador — nenhuma imagem é enviada para servidor algum.
 

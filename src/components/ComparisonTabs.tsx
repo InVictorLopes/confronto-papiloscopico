@@ -37,7 +37,7 @@ export default function ComparisonTabs({ tabs, activeTabId, onSwitch, onAdd, onR
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-1 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex items-end gap-1 overflow-x-auto border-b md:flex-wrap md:overflow-visible border-gray-200 dark:border-gray-700">
       {tabs.map((tab) => {
         const active = tab.id === activeTabId
         return (
@@ -45,7 +45,7 @@ export default function ComparisonTabs({ tabs, activeTabId, onSwitch, onAdd, onR
             key={tab.id}
             onClick={() => onSwitch(tab.id)}
             onDoubleClick={() => startRenaming(tab)}
-            className={`group flex cursor-pointer items-center gap-1 rounded-t-md border border-b-0 px-3 py-1.5 text-sm ${
+            className={`group flex shrink-0 cursor-pointer items-center gap-1 rounded-t-md border border-b-0 px-3 py-2 text-sm md:py-1.5 ${
               active
                 ? 'border-gray-200 bg-white font-medium text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100'
                 : 'border-transparent bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-900/40 dark:text-gray-400 dark:hover:bg-gray-800'
@@ -74,7 +74,7 @@ export default function ComparisonTabs({ tabs, activeTabId, onSwitch, onAdd, onR
                 e.stopPropagation()
                 startRenaming(tab)
               }}
-              className="rounded p-0.5 text-gray-400 opacity-0 hover:bg-gray-200 group-hover:opacity-100 dark:hover:bg-gray-700"
+              className="hidden rounded p-0.5 text-gray-400 opacity-0 hover:bg-gray-200 md:block md:group-hover:opacity-100 dark:hover:bg-gray-700"
               title="Renomear aba"
             >
               <Pencil size={11} />
@@ -85,7 +85,7 @@ export default function ComparisonTabs({ tabs, activeTabId, onSwitch, onAdd, onR
                   e.stopPropagation()
                   onClose(tab.id)
                 }}
-                className="rounded p-0.5 text-gray-400 opacity-0 hover:bg-red-100 hover:text-red-600 group-hover:opacity-100 dark:hover:bg-red-900/40"
+                className="rounded p-1 text-gray-400 opacity-100 hover:bg-red-100 hover:text-red-600 md:p-0.5 md:opacity-0 md:group-hover:opacity-100 dark:hover:bg-red-900/40"
                 title="Fechar aba"
               >
                 <X size={12} />
@@ -96,7 +96,7 @@ export default function ComparisonTabs({ tabs, activeTabId, onSwitch, onAdd, onR
       })}
       <button
         onClick={onAdd}
-        className="mb-1 flex items-center gap-1 rounded-md px-2 py-1 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+        className="mb-1 flex shrink-0 items-center gap-1 rounded-md px-2 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
         title="Nova aba — cria um confronto novo, independente dos outros"
       >
         <Plus size={16} />

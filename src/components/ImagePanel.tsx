@@ -963,11 +963,11 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
 
   return (
     <div className="flex flex-1 flex-col gap-2 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-1">
-        <h2 className="font-semibold text-gray-700 dark:text-gray-200">
+      <div className="flex flex-wrap items-center justify-between gap-x-1 gap-y-2">
+        <h2 className="w-full font-semibold text-gray-700 md:w-auto dark:text-gray-200">
           {title} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(Imagem {slot})</span>
         </h2>
-        <div className="flex items-center gap-1">
+        <div className="flex w-full items-center justify-end gap-1 md:w-auto">
           {image && (
             <button
               onClick={() => (adjustMode ? finishAdjust() : setAdjustMode(true))}
