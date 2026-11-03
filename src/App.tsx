@@ -513,7 +513,7 @@ export default function App() {
           </defs>
           <circle cx="16" cy="16" r="5.2" stroke="url(#minutia-gold)" strokeWidth={1.7} className="fill-white/85 dark:fill-gray-900/85" />
           <path d="M13.6 16.2a2.6 2.6 0 0 1 2-2.5" stroke="#f3d36b" strokeWidth={1.1} />
-          <path d="m20 20 3 3" stroke="url(#minutia-gold)" strokeWidth={2.8} />
+          <path d="m20 20 2.5 2.5" stroke="url(#minutia-gold)" strokeWidth={2.8} />
         </svg>
         <h1 className="flex-1 font-minutia text-2xl font-bold tracking-[0.14em] md:text-3xl md:tracking-[0.18em] text-transparent bg-clip-text bg-gradient-to-br from-[#e6bf4a] via-[#c99a1e] to-[#8f6410]">
           MINUTIA
