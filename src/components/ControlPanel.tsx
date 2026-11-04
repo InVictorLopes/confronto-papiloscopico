@@ -1,5 +1,6 @@
-import { Download, FolderOpen, Save, Undo2 } from 'lucide-react'
+import { Download, FolderOpen, Save, Sparkles, Undo2 } from 'lucide-react'
 import type { ComparisonStep } from '../types'
+import { BetaBadge } from './SuggestDialog'
 
 interface ControlPanelProps {
   currentStep: ComparisonStep
@@ -13,6 +14,8 @@ interface ControlPanelProps {
   onSaveProject: () => void
   canSaveProject: boolean
   onOpenProject: () => void
+  onSuggest: () => void
+  canSuggest: boolean
 }
 
 export default function ControlPanel({
@@ -27,6 +30,8 @@ export default function ControlPanel({
   onSaveProject,
   canSaveProject,
   onOpenProject,
+  onSuggest,
+  canSuggest,
 }: ControlPanelProps) {
   const feedback = !hasImages
     ? 'Carregue as duas imagens para iniciar a marcação'
@@ -74,6 +79,21 @@ export default function ControlPanel({
           <Save size={20} className="md:h-4 md:w-4" />
           <span className="md:hidden">Salvar</span>
           <span className="hidden md:inline">Salvar edição</span>
+        </button>
+
+        <button
+          onClick={onSuggest}
+          disabled={!canSuggest}
+          className="col-span-3 flex items-center justify-center gap-2 rounded-lg bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-800 ring-1 ring-amber-300 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-40 md:col-span-1 md:gap-1.5 md:rounded-md md:py-1.5 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/40 dark:hover:bg-amber-500/20"
+          title={
+            canSuggest
+              ? 'Sugere pares de pontos entre as duas imagens (ferramenta em fase BETA)'
+              : 'Carregue as duas imagens e conclua o ponto em andamento para usar a sugestão de pontos'
+          }
+        >
+          <Sparkles size={18} className="md:h-4 md:w-4" />
+          Sugerir pontos
+          <BetaBadge />
         </button>
 
         <button

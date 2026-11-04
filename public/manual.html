@@ -519,16 +519,17 @@
       <a href="#inicio"><span class="num">01</span>Comece por aqui</a>
       <a href="#carregar"><span class="num">02</span>Carregar imagens</a>
       <a href="#marcar"><span class="num">03</span>Marcar pontos</a>
-      <a href="#ajustar"><span class="num">04</span>Ajustar a imagem</a>
-      <a href="#recorte"><span class="num">05</span>Recortar</a>
-      <a href="#molde"><span class="num">06</span>O molde</a>
-      <a href="#lupas"><span class="num">07</span>Lupas de precisão</a>
-      <a href="#aparencia"><span class="num">08</span>Aparência dos pontos</a>
-      <a href="#abas"><span class="num">09</span>Abas de confronto</a>
-      <a href="#exportar"><span class="num">10</span>Exportar</a>
-      <a href="#edicao"><span class="num">11</span>Salvar e reabrir</a>
-      <a href="#tema"><span class="num">12</span>Tema, celular e privacidade</a>
-      <a href="#referencia"><span class="num">13</span>Referência rápida</a>
+      <a href="#sugestao"><span class="num">04</span>Sugestão de pontos (BETA)</a>
+      <a href="#ajustar"><span class="num">05</span>Ajustar a imagem</a>
+      <a href="#recorte"><span class="num">06</span>Recortar</a>
+      <a href="#molde"><span class="num">07</span>O molde</a>
+      <a href="#lupas"><span class="num">08</span>Lupas de precisão</a>
+      <a href="#aparencia"><span class="num">09</span>Aparência dos pontos</a>
+      <a href="#abas"><span class="num">10</span>Abas de confronto</a>
+      <a href="#exportar"><span class="num">11</span>Exportar</a>
+      <a href="#edicao"><span class="num">12</span>Salvar e reabrir</a>
+      <a href="#tema"><span class="num">13</span>Tema, celular e privacidade</a>
+      <a href="#referencia"><span class="num">14</span>Referência rápida</a>
     </nav>
 
     <main>
@@ -609,8 +610,54 @@
         <p>As setinhas <span class="chip">▲</span> / <span class="chip">▼</span> ao lado de cada linha movem aquele ponto para cima ou para baixo na tabela — útil para reagrupar visualmente depois de excluir e remarcar um ponto no meio da lista.</p>
       </section>
 
+      <section id="sugestao">
+        <div class="sec-head"><span class="sec-num">04</span><h2>Sugestão de pontos (BETA)</h2></div>
+        <p class="lead">Uma ajuda para encontrar pares de pontos entre as duas imagens — sempre conferida por você.</p>
+        <div class="callout">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 9v4M12 16.5h.01"/><path d="M4.5 19h15a2 2 0 0 0 1.7-3L13.7 4a2 2 0 0 0-3.4 0L2.8 16a2 2 0 0 0 1.7 3Z"/></svg>
+          <div><strong>Ferramenta em fase BETA.</strong> As sugestões são geradas automaticamente e podem conter erros ou omissões. Confira cada ponto nas duas imagens antes de adicioná-lo: a análise e a conclusão continuam sendo do perito.</div>
+        </div>
+
+        <h3>Como usar</h3>
+        <ol class="steps">
+          <li><span>Carregue as duas imagens. Se quiser limitar a busca a uma região, faça o <strong>recorte</strong> antes — só são sugeridos pontos dentro da área recortada.</span></li>
+          <li><span>Clique em <span class="chip">Sugerir pontos</span>. O botão fica ativo quando as duas imagens estão carregadas e não há ponto pendente (esperando o lado B).</span></li>
+          <li><span>Aguarde alguns segundos. As duas imagens aparecem lado a lado, com os pares sugeridos numerados e coloridos. A numeração segue um <strong>relógio</strong>: do 1 até o último número, em volta do centro da impressão, começando às 12h e avançando no sentido horário até fechar a volta.</span></li>
+          <li><span>Clique num ponto — ou use a caixa de seleção da lista — para incluí-lo ou tirá-lo da seleção. Passar o mouse sobre uma linha da lista destaca o par nas duas imagens.</span></li>
+          <li><span>Clique em <span class="chip">Adicionar</span>. Os pontos escolhidos entram nessa mesma numeração (se já houver pontos marcados, ocupam os próximos números livres) e, daí em diante, são pontos comuns: dá para arrastar, renumerar, ocultar o número e excluir.</span></li>
+        </ol>
+
+        <h3>Modo lupa</h3>
+        <p>O botão <span class="chip">Modo lupa</span> liga a ampliação: fica à direita da Imagem Padrão, acima da lista de pontos (em telas estreitas, acima das imagens). Com ele ligado, clicar num ponto (ou perto dele, em qualquer das duas imagens) abre uma tela com o ponto <strong>ampliado nas duas imagens, lado a lado</strong>, no centro de cada uma e mostrando a mesma região nas duas.</p>
+        <ul>
+          <li><strong>Mover:</strong> arraste a imagem com o mouse. Por padrão as duas se movem juntas; desmarque <span class="chip">Mover as duas imagens juntas</span> para mover cada uma separadamente.</li>
+          <li><strong>Aproximar:</strong> role o mouse sobre a imagem (o ponto sob o cursor fica parado) ou use o controle <strong>Aproximação</strong>. O zoom vale para as duas imagens.</li>
+          <li><strong>Ajustar o ponto:</strong> arraste o círculo para a posição exata. Só o ponto daquela imagem se move; <span class="chip">Restaurar posição</span> volta ao que foi sugerido. A posição ajustada vale ao adicionar o ponto.</li>
+          <li><strong>Trocar de ponto:</strong> as setas da tela, ou <span class="chip">←</span> <span class="chip">→</span> no teclado.</li>
+          <li><strong>Os outros pontos:</strong> os demais pontos sugeridos aparecem nas duas imagens, com o número e a cor de cada um, quando estão na região mostrada. Os que ficam fora dela aparecem como bolinhas numeradas na borda, do lado em que estão. Clique em qualquer um para ir até ele.</li>
+          <li><strong>Incluir este ponto</strong> permite decidir ali mesmo se o ponto entra ou não.</li>
+          <li><span class="chip">Sair do modo lupa</span>, o botão azul no centro da tela, ou <span class="chip">Esc</span>, retornam às imagens.</li>
+        </ul>
+        <p>Com o modo lupa desligado, clicar num ponto inclui ou tira o ponto da seleção, e o ícone de lupa, na linha de cada ponto da lista, também abre a ampliação.</p>
+
+        <h3>O que o sistema faz</h3>
+        <ul>
+          <li>Mede o espaçamento das cristas em cada imagem para colocá-las na mesma escala.</li>
+          <li>Detecta as minúcias (fins de crista e bifurcações) em cada imagem.</li>
+          <li>Alinha as duas imagens (rotação, escala e deslocamento) e pareia as minúcias correspondentes.</li>
+          <li>Escolhe os pares de melhor qualidade, espalhados pela imagem, sem repetir pontos que você já marcou.</li>
+        </ul>
+        <p>Tudo acontece no seu navegador: as imagens não saem do computador.</p>
+
+        <h3>Quantidade e novas análises</h3>
+        <p>O campo <span class="chip">Quantidade</span> define quantos pares sugerir (de 6 a 20; o padrão é 12). <span class="chip">Analisar de novo</span> refaz a análise com a quantidade escolhida e deixa de fora os pontos que já estão marcados — útil para pedir mais sugestões depois de adicionar as primeiras. A coluna <strong>Qualidade</strong> (Alta, Média ou Baixa) indica a confiança da detecção naquele par.</p>
+
+        <h3>Quando nada é sugerido</h3>
+        <p>Se o sistema não encontrar correspondência confiável entre as imagens (menos de 12 pares consistentes), ele avisa e não sugere nenhum ponto. Isso acontece, por exemplo, com impressões de dedos diferentes, com imagens de baixa qualidade ou quando a área em comum é muito pequena. Imagens nítidas e com bastante área em comum dão os melhores resultados; impressões parciais e de qualidade baixa tendem a gerar menos sugestões, e menos confiáveis.</p>
+      </section>
+
       <section id="ajustar">
-        <div class="sec-head"><span class="sec-num">04</span><h2>Ajustar a imagem</h2></div>
+        <div class="sec-head"><span class="sec-num">05</span><h2>Ajustar a imagem</h2></div>
         <p class="lead">Clique em <span class="chip">Ajustar imagem</span>, no canto de qualquer painel, para abrir a barra de ajuste daquele lado.</p>
         <p>A barra abre na <strong>lateral de fora</strong> de cada quadro: à esquerda da Imagem&nbsp;A e à direita da Imagem&nbsp;B. Em telas largas, ela ocupa o espaço vazio da lateral da página e os quadros <strong>não mudam de tamanho</strong>. Em telas mais estreitas, onde esse espaço não existe, a barra entra ao lado do quadro e os dois quadros diminuem um pouco (sempre juntos, para continuarem do mesmo tamanho), voltando ao normal ao clicar em <span class="chip">Concluir ajuste</span>. Se os controles não couberem na altura do quadro, role a barra para ver o resto.</p>
 
@@ -658,7 +705,7 @@
       </section>
 
       <section id="recorte">
-        <div class="sec-head"><span class="sec-num">05</span><h2>Recortar</h2></div>
+        <div class="sec-head"><span class="sec-num">06</span><h2>Recortar</h2></div>
         <p class="lead">Com o ajuste aberto, <span class="chip">Recortar</span> deixa visível só a área que interessa — o original nunca é alterado.</p>
         <p>O recorte parte do <strong>zoom e da posição atuais</strong> da imagem: se você ampliou uma região antes de recortar, é essa região que aparece para recortar. Durante o recorte, a roda do mouse dá zoom e arrastar fora da seleção move a imagem.</p>
 
@@ -675,14 +722,14 @@
       </section>
 
       <section id="molde">
-        <div class="sec-head"><span class="sec-num">06</span><h2>O molde</h2></div>
+        <div class="sec-head"><span class="sec-num">07</span><h2>O molde</h2></div>
         <p class="lead">Com o ajuste aberto, o botão <span class="chip">Molde</span> sobrepõe a <em>outra</em> imagem, semitransparente, por cima da que você está ajustando.</p>
         <p>Assim dá para alinhar visualmente as duas digitais — corrigir enquadramento, rotação ou zoom de um lado enquanto compara diretamente com o outro.</p>
         <p>O molde vem <strong>desligado</strong> por padrão: clique em <span class="chip">Molde</span> para ligar quando precisar, e de novo para desligar se ele atrapalhar a visualização. O botão só aparece quando a outra imagem já foi carregada.</p>
       </section>
 
       <section id="lupas">
-        <div class="sec-head"><span class="sec-num">07</span><h2>Lupas de precisão</h2></div>
+        <div class="sec-head"><span class="sec-num">08</span><h2>Lupas de precisão</h2></div>
         <p class="lead">Ao começar a arrastar um ponto, uma lupa flutuante aparece sobre cada quadro, perto do ponto, para você posicioná-lo com precisão.</p>
         <p>A lupa fica sempre do lado oposto ao ponto dentro do quadro (abaixo dele quando o ponto está na metade de cima, e acima quando está na de baixo), de modo que nunca cobre o que você está ajustando. Ela acompanha o ponto enquanto você arrasta e some assim que você solta.</p>
         <p>Cada quadro tem a sua: a da <strong>Imagem&nbsp;A</strong> com borda <strong>vermelha</strong> e a da <strong>Imagem&nbsp;B</strong> com borda <strong>azul</strong> — as mesmas cores dos quadros. O rótulo <strong>Editando</strong> indica o lado que você está arrastando; o rótulo <strong>Referência</strong> é o outro lado, no ponto correspondente, para comparar a minúcia enquanto você posiciona. Se o ponto ainda não existe no outro lado, só a lupa do lado arrastado aparece.</p>
@@ -690,7 +737,7 @@
       </section>
 
       <section id="aparencia">
-        <div class="sec-head"><span class="sec-num">08</span><h2>Aparência dos pontos</h2></div>
+        <div class="sec-head"><span class="sec-num">09</span><h2>Aparência dos pontos</h2></div>
         <p class="lead">A marcação segue um padrão fixo, igual em todo confronto — pensado pra ficar consistente entre laudos, então não dá pra mudar cor, tamanho ou espessura.</p>
 
         <h3>Bolinha branca, número vermelho</h3>
@@ -706,7 +753,7 @@
       </section>
 
       <section id="abas">
-        <div class="sec-head"><span class="sec-num">09</span><h2>Abas de confronto</h2></div>
+        <div class="sec-head"><span class="sec-num">10</span><h2>Abas de confronto</h2></div>
         <p class="lead">Cada aba guarda um confronto independente: as duas imagens, os pontos, o recorte e os ajustes.</p>
         <p>As abas ficam logo abaixo do cabeçalho. Trocar de aba nunca descarta o que foi feito nas outras, então dá para conduzir vários confrontos ao mesmo tempo.</p>
         <ul>
@@ -718,7 +765,7 @@
       </section>
 
       <section id="exportar">
-        <div class="sec-head"><span class="sec-num">10</span><h2>Exportar o confronto</h2></div>
+        <div class="sec-head"><span class="sec-num">11</span><h2>Exportar o confronto</h2></div>
         <p class="lead">O botão <span class="chip">Exportar Confronto</span> fica sempre visível, mas só libera quando existe ao menos um par completo.</p>
         <p>Ao clicar, abre uma caixa com quatro opções, todas marcadas por padrão — desmarque as que não quiser:</p>
         <div class="grid-cards">
@@ -737,7 +784,7 @@
       </section>
 
       <section id="edicao">
-        <div class="sec-head"><span class="sec-num">11</span><h2>Salvar e reabrir a edição</h2></div>
+        <div class="sec-head"><span class="sec-num">12</span><h2>Salvar e reabrir a edição</h2></div>
         <p class="lead">Pensado para corrigir um confronto depois — por exemplo, após a revisão do laudo.</p>
         <p><span class="chip">Salvar edição</span>, no topo da tela, gera um arquivo <code>.json</code> com as duas imagens, todos os pontos, os recortes e todos os ajustes (zoom, rotação, níveis etc.) do confronto da aba ativa — pede um nome antes de baixar, do mesmo jeito que a exportação de imagens.</p>
         <p><span class="chip">Abrir edição</span> carrega esse arquivo na aba ativa, no lugar do que estiver nela, exatamente como foi salvo: imagens, pontos, recortes e ajustes voltam ao lugar, prontos para corrigir e exportar de novo. Se o arquivo não for uma edição válida, o sistema avisa.</p>
@@ -748,14 +795,14 @@
       </section>
 
       <section id="tema">
-        <div class="sec-head"><span class="sec-num">12</span><h2>Tema, celular e privacidade</h2></div>
+        <div class="sec-head"><span class="sec-num">13</span><h2>Tema, celular e privacidade</h2></div>
         <p class="lead">No canto superior direito ficam dois botões: <span class="chip">?</span> abre este manual, e o de <strong>sol/lua</strong> alterna entre os modos claro e escuro — a escolha fica salva no navegador.</p>
-        <p>No computador o botão de tema mostra também o texto <span class="chip">Modo escuro</span> / <span class="chip">Modo claro</span>. Em telas pequenas, como a do celular, os quadros ficam um abaixo do outro, os botões de ajuda e de tema aparecem só com o ícone, e <span class="chip">Desfazer</span>, <span class="chip">Abrir</span> e <span class="chip">Salvar</span> formam uma fileira acima do botão <span class="chip">Exportar Confronto</span>.</p>
+        <p>No computador o botão de tema mostra também o texto <span class="chip">Modo escuro</span> / <span class="chip">Modo claro</span>. Em telas pequenas, como a do celular, os quadros ficam um abaixo do outro, os botões de ajuda e de tema aparecem só com o ícone, e <span class="chip">Desfazer</span>, <span class="chip">Abrir</span> e <span class="chip">Salvar</span> formam uma fileira acima dos botões <span class="chip">Sugerir pontos</span> e <span class="chip">Exportar Confronto</span>.</p>
         <p>Nada do que você carrega ou marca sai do seu computador: sem conta, sem servidor, sem histórico salvo entre sessões. Fechou a aba do navegador, os dados somem — só o arquivo exportado (se você exportou) fica salvo, como qualquer download.</p>
       </section>
 
       <section id="referencia">
-        <div class="sec-head"><span class="sec-num">13</span><h2>Referência rápida</h2></div>
+        <div class="sec-head"><span class="sec-num">14</span><h2>Referência rápida</h2></div>
         <p class="lead">Todos os controles, num só lugar.</p>
         <div class="ref-scroll">
           <table class="ref">
@@ -777,6 +824,7 @@
               <tr><td class="chip">Desfazer último ponto</td><td>Barra de status</td><td>Remove o ponto mais recente</td></tr>
               <tr><td class="chip">Abrir edição</td><td>Barra de status</td><td>Recarrega um confronto salvo em .json</td></tr>
               <tr><td class="chip">Salvar edição</td><td>Barra de status</td><td>Salva imagens, pontos e ajustes num .json editável</td></tr>
+              <tr><td class="chip">Sugerir pontos (BETA)</td><td>Barra de status</td><td>Sugere pares de pontos entre as duas imagens, para você conferir e adicionar</td></tr>
               <tr><td class="chip">Exportar Confronto</td><td>Barra de status</td><td>Abre a caixa de seleção de arquivos e nomes</td></tr>
               <tr><td class="chip">Mostrar números</td><td>Barra acima da tabela</td><td>Esconde/mostra o número de todos os pontos</td></tr>
               <tr><td class="chip">Modo linha</td><td>Barra acima da tabela</td><td>Arrastar move só o número, com linha até o ponto; trava a marcação de pontos novos</td></tr>

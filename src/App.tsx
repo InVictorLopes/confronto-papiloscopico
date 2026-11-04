@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import html2canvas from 'html2canvas-pro'
 import { Hash, HelpCircle, Moon, MoveUpRight, Sun } from 'lucide-react'
-import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, ProjectFile } from './types'
+import type { AppState, Coordinate, CropMask, ImageSlot, ImageTransform, Minutia, ProjectFile } from './types'
 import { DEFAULT_IMAGE_TRANSFORM, WILDCARD_LABEL, isWildcardId } from './types'
 import ImagePanel, { SIDEBAR_GAP, SIDEBAR_WIDTH } from './components/ImagePanel'
 import ComparisonTabs, { type ComparisonTabMeta } from './components/ComparisonTabs'
@@ -9,6 +9,8 @@ import ControlPanel from './components/ControlPanel'
 import MinutiaeTable from './components/MinutiaeTable'
 import ExportDialog from './components/ExportDialog'
 import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
+import SuggestDialog from './components/SuggestDialog'
+import type { SuggestedPair } from './suggest'
 import { useTheme } from './useTheme'
 import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
 import { applyCropMasksForExport } from './cropExport'
@@ -116,6 +118,7 @@ export default function App() {
   const [exporting, setExporting] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
+  const [showSuggest, setShowSuggest] = useState(false)
   const [showNumbers, setShowNumbers] = useState(true)
   const [arrowMode, setArrowMode] = useState(false)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
@@ -285,6 +288,26 @@ export default function App() {
       minutiae: prev.minutiae.map((m) => (m.coordB === null ? { ...m, coordB: coord } : m)),
       currentStep: 'WAITING_A',
     }))
+  }
+
+  // Pontos aceitos na sugestão (BETA): entram como pares completos, com a próxima numeração livre,
+  // e daí em diante são pontos comuns (dá para mover, renumerar e excluir).
+  function handleAddSuggested(pairs: SuggestedPair[]) {
+    setState((prev) => {
+      const minutiae: Minutia[] = [...prev.minutiae]
+      for (const p of pairs) {
+        minutiae.push({
+          id: nextAvailableId(minutiae),
+          coordA: p.a,
+          coordB: p.b,
+          labelOffsetA: { x: 0, y: 0 },
+          labelOffsetB: { x: 0, y: 0 },
+          hideNumber: false,
+        })
+      }
+      return { ...prev, minutiae }
+    })
+    setShowSuggest(false)
   }
 
   function handleMovePoint(slot: ImageSlot, id: number, coord: Coordinate) {
@@ -561,6 +584,8 @@ export default function App() {
         onSaveProject={() => setShowSaveDialog(true)}
         canSaveProject={hasImages}
         onOpenProject={() => projectInputRef.current?.click()}
+        onSuggest={() => setShowSuggest(true)}
+        canSuggest={hasImages && state.currentStep === 'WAITING_A'}
       />
       <input
         ref={projectInputRef}
@@ -579,6 +604,18 @@ export default function App() {
           dateSuffix={buildDateSuffix()}
           onConfirm={performExport}
           onCancel={() => setShowExportDialog(false)}
+        />
+      )}
+
+      {showSuggest && state.imageA && state.imageB && (
+        <SuggestDialog
+          imageA={state.imageA}
+          imageB={state.imageB}
+          cropA={state.cropA}
+          cropB={state.cropB}
+          minutiae={state.minutiae}
+          onAdd={handleAddSuggested}
+          onClose={() => setShowSuggest(false)}
         />
       )}
 

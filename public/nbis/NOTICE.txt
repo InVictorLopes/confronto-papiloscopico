@@ -1,0 +1,15 @@
+Sugestão de pontos (BETA)
+
+Esta pasta contém a detecção de minúcias usada pela sugestão de pontos:
+
+  nbis.js / nbis.wasm   MINDTCT, do NIST Biometric Image Software (NBIS), compilado para
+                        WebAssembly com Emscripten.
+  suggest-worker.js     Código próprio: normalização de escala, alinhamento, pareamento
+                        e escolha dos pontos.
+
+O NBIS foi desenvolvido pelo NIST (National Institute of Standards and Technology, EUA) e é
+distribuído como software de domínio público. Informações e termos de uso:
+https://www.nist.gov/services-resources/software/nist-biometric-image-software-nbis
+
+Somente o MINDTCT (detecção de minúcias) é incluído. A análise roda inteira no navegador,
+dentro de um Web Worker; nenhuma imagem é enviada a servidores.

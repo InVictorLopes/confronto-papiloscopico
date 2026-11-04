@@ -18,6 +18,15 @@ Ferramenta web para auxiliar no confronto (comparação) de impressões digitais
 - "Molde": sobrepõe a outra imagem semitransparente durante o ajuste, para alinhar as duas digitais visualmente
 - Tema claro/escuro (detecta preferência do sistema, com opção de alternar manualmente)
 - Exportação do confronto em JPEG, com caixa de diálogo para nomear o arquivo (sugestão automática com a data)
+- **Sugestão de pontos (BETA)**: sugere pares de pontos entre as duas imagens para o perito conferir e adicionar (detalhes abaixo)
+
+## Sugestão de pontos (BETA)
+
+Ferramenta em fase BETA: as sugestões são só um apoio e a conferência é sempre do perito.
+
+- Detecta as minúcias de cada imagem com o MINDTCT (NIST Biometric Image Software, domínio público), compilado para WebAssembly, e alinha e pareia as duas imagens com código próprio.
+- Roda num Web Worker, no navegador. O código fica em `public/nbis/` (`suggest-worker.js`, `nbis.js`, `nbis.wasm`; ver `NOTICE.txt`) e a parte de interface em `src/suggest.ts` e `src/components/SuggestDialog.tsx`.
+- Respeita o recorte, não repete pontos já marcados e não sugere nada quando as imagens não têm correspondência confiável (menos de 12 pares consistentes).
 
 ## Stack técnica
 
@@ -66,6 +75,10 @@ src/
     MinutiaeTable.tsx       # Tabela de pontos marcados
     Magnifier.tsx            # Lupa de precisão usada ao editar um ponto
     ExportDialog.tsx        # Caixa de diálogo para nomear o arquivo exportado
+    SuggestDialog.tsx       # Sugestão de pontos (BETA): revisão dos pares sugeridos
+  suggest.ts                # Prepara as imagens e conversa com o worker da sugestão
+public/
+  nbis/                     # Worker e WebAssembly da sugestão de pontos
 ```
 
 ## Privacidade
