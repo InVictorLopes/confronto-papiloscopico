@@ -10,6 +10,7 @@ import MinutiaeTable from './components/MinutiaeTable'
 import ExportDialog from './components/ExportDialog'
 import MultiExportDialog, { type ExportSelection } from './components/MultiExportDialog'
 import SuggestDialog from './components/SuggestDialog'
+import EasyCrop from './components/EasyCrop'
 import type { SuggestedPair } from './suggest'
 import { useTheme } from './useTheme'
 import { isPdfFile, renderPdfPageToDataUrl } from './pdf'
@@ -119,6 +120,8 @@ export default function App() {
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showSuggest, setShowSuggest] = useState(false)
+  // Quadro com o "Recorte fácil" aberto (null = fechado).
+  const [easyCropSlot, setEasyCropSlot] = useState<ImageSlot | null>(null)
   const [showNumbers, setShowNumbers] = useState(true)
   const [arrowMode, setArrowMode] = useState(false)
   const [editing, setEditing] = useState<{ id: number; slot: ImageSlot } | null>(null)
@@ -238,6 +241,11 @@ export default function App() {
     } else {
       dataUrl = await readFileAsDataUrl(file)
     }
+    setSlotImage(slot, dataUrl)
+  }
+
+  // Troca a imagem de um quadro (arquivo carregado ou recorte do "Recorte fácil").
+  function setSlotImage(slot: ImageSlot, dataUrl: string) {
     setState((prev) => ({
       ...prev,
       [slot === 'A' ? 'imageA' : 'imageB']: dataUrl,
@@ -619,6 +627,20 @@ export default function App() {
         />
       )}
 
+      {easyCropSlot && (easyCropSlot === 'A' ? state.imageA : state.imageB) && (
+        <EasyCrop
+          image={(easyCropSlot === 'A' ? state.imageA : state.imageB)!}
+          title={easyCropSlot === 'A' ? 'Imagem Questionada (A)' : 'Imagem Padrão (B)'}
+          slot={easyCropSlot}
+          hasPoints={state.minutiae.length > 0}
+          onApply={(dataUrl) => {
+            setSlotImage(easyCropSlot, dataUrl)
+            setEasyCropSlot(null)
+          }}
+          onClose={() => setEasyCropSlot(null)}
+        />
+      )}
+
       {showSaveDialog && (
         <ExportDialog
           title="Salvar edição"
@@ -650,6 +672,7 @@ export default function App() {
           magnifier={magnifierFor('A')}
           canCreate={state.currentStep === 'WAITING_A' && !arrowMode}
           onUpload={(file) => handleUpload('A', file)}
+          onEasyCrop={() => setEasyCropSlot('A')}
           onApplyCrop={(mask) => handleApplyCrop('A', mask)}
           onRevertCrop={() => handleRevertCrop('A')}
           onCreatePoint={handleCreatePointA}
@@ -679,6 +702,7 @@ export default function App() {
           magnifier={magnifierFor('B')}
           canCreate={state.currentStep === 'WAITING_B' && !arrowMode}
           onUpload={(file) => handleUpload('B', file)}
+          onEasyCrop={() => setEasyCropSlot('B')}
           onApplyCrop={(mask) => handleApplyCrop('B', mask)}
           onRevertCrop={() => handleRevertCrop('B')}
           onCreatePoint={handleCreatePointB}

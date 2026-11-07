@@ -28,6 +28,7 @@ import {
   RefreshCw,
   RotateCcw,
   RotateCw,
+  Scissors,
   Square,
   Sun,
   SunDim,
@@ -63,6 +64,8 @@ interface ImagePanelProps {
   magnifier: { variant: 'editing' | 'reference'; point: Coordinate } | null
   canCreate: boolean
   onUpload: (file: File) => void
+  // Abre o "Recorte fácil" (recorte de verdade, que troca a imagem do quadro).
+  onEasyCrop: () => void
   onApplyCrop: (mask: CropMask) => void
   onRevertCrop: () => void
   onCreatePoint: (coord: Coordinate) => void
@@ -272,6 +275,7 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
   magnifier,
   canCreate: allowCreate,
   onUpload,
+  onEasyCrop,
   onApplyCrop,
   onRevertCrop,
   onCreatePoint,
@@ -979,6 +983,16 @@ const ImagePanel = forwardRef<HTMLDivElement, ImagePanelProps>(function ImagePan
             >
               {adjustMode ? <Check size={14} /> : <Move size={14} />}
               {adjustMode ? 'Concluir ajuste' : 'Ajustar imagem'}
+            </button>
+          )}
+          {image && (
+            <button
+              onClick={onEasyCrop}
+              className="flex items-center gap-1 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-700"
+              title="Recorta a imagem de verdade (gera uma imagem nova só com a área escolhida), como recortar fora do sistema"
+            >
+              <Scissors size={14} />
+              Recorte fácil
             </button>
           )}
           <button
