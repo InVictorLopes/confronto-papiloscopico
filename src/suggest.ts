@@ -1,4 +1,5 @@
 import type { Coordinate, CropMask } from './types'
+import { cropPixelBox, hasCrop, toLocal, toOriginal, type Box } from './cropView'
 
 // Sugestão de pontos (BETA): a análise roda num Web Worker (public/nbis/suggest-worker.js)
 // com o MINDTCT/NBIS compilado para WebAssembly. Nada sai do navegador.
@@ -54,14 +55,6 @@ interface RgbaImage {
   data: ArrayBuffer
 }
 
-// Área da imagem original que foi enviada à análise, em % da imagem original.
-interface Box {
-  left: number
-  top: number
-  width: number
-  height: number
-}
-
 interface PreparedImage {
   rgba: RgbaImage
   box: Box
@@ -80,17 +73,12 @@ function prepareImage(dataUrl: string, crop: CropMask | null): Promise<PreparedI
     img.onload = () => {
       const W = img.naturalWidth
       const H = img.naturalHeight
-      const pts = crop && crop.points.length > 2 ? crop.points : null
+      const pts = hasCrop(crop) ? crop.points : null
 
       // Caixa (px da imagem original) em volta do recorte; sem recorte, a imagem inteira.
       let sx = 0, sy = 0, sw = W, sh = H
       if (pts) {
-        const xs = pts.map((p) => (p.x / 100) * W)
-        const ys = pts.map((p) => (p.y / 100) * H)
-        sx = Math.max(0, Math.floor(Math.min(...xs)))
-        sy = Math.max(0, Math.floor(Math.min(...ys)))
-        sw = Math.min(W, Math.ceil(Math.max(...xs))) - sx
-        sh = Math.min(H, Math.ceil(Math.max(...ys))) - sy
+        ;({ sx, sy, sw, sh } = cropPixelBox(crop!, W, H))
         if (sw < 8 || sh < 8) {
           reject(new Error('O recorte de uma das imagens está pequeno demais para a análise.'))
           return
@@ -139,10 +127,6 @@ function prepareImage(dataUrl: string, crop: CropMask | null): Promise<PreparedI
     img.src = dataUrl
   })
 }
-
-// % da imagem original -> % da área enviada, e o caminho de volta.
-const toLocal = (p: Coordinate, b: Box): Coordinate => ({ x: ((p.x - b.left) / b.width) * 100, y: ((p.y - b.top) / b.height) * 100 })
-const toOriginal = (p: Coordinate, b: Box): Coordinate => ({ x: b.left + (p.x / 100) * b.width, y: b.top + (p.y / 100) * b.height })
 
 // O worker responde em % da área enviada; o resto do sistema trabalha em % da imagem original.
 function mapResultToOriginal(r: SuggestResult, boxA: Box, boxB: Box): SuggestResult {

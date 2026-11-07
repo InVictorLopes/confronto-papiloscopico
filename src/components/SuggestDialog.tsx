@@ -3,6 +3,7 @@ import { AlertTriangle, Check, Loader2, Search, Sparkles, X } from 'lucide-react
 import type { Coordinate, CropMask, Minutia } from '../types'
 import { suggestPoints, type SuggestResult, type SuggestedPair } from '../suggest'
 import PairLens, { COLORS, qualityLabel } from './PairLens'
+import { buildCropView, FULL_BOX, toLocal, toOriginal, type CropView } from '../cropView'
 
 interface SuggestDialogProps {
   imageA: string
@@ -134,6 +135,25 @@ export default function SuggestDialog({ imageA, imageB, cropA, cropB, minutiae, 
 
   const original = result?.pairs ?? []
 
+  // O que aparece aqui é o MESMO recorte do quadro principal (não a imagem inteira). Os pares
+  // continuam guardados em % da imagem original (é assim que voltam para os quadros); para
+  // mostrar, são convertidos para % da área recortada, e o que o perito move volta convertido.
+  const [views, setViews] = useState<{ a: CropView; b: CropView } | null>(null)
+  useEffect(() => {
+    let alive = true
+    Promise.all([buildCropView(imageA, cropA), buildCropView(imageB, cropB)])
+      .then(([a, b]) => alive && setViews({ a, b }))
+      .catch(() => alive && setViews({ a: { src: imageA, box: FULL_BOX }, b: { src: imageB, box: FULL_BOX } }))
+    return () => {
+      alive = false
+    }
+  }, [imageA, imageB, cropA, cropB])
+
+  const toView = (list: SuggestedPair[]) =>
+    views ? list.map((p) => ({ ...p, a: toLocal(p.a, views.a.box), b: toLocal(p.b, views.b.box) })) : list
+  const viewPairs = toView(pairs)
+  const viewOriginal = toView(original)
+
   // A análise roda ao abrir e a cada "Analisar de novo" (run), não a cada mudança de quantidade.
   // Os pontos já marcados são lidos no início de cada análise, para não repetir nenhum.
   useEffect(() => {
@@ -202,7 +222,7 @@ export default function SuggestDialog({ imageA, imageB, cropA, cropB, minutiae, 
     if (!lensMode) return
     let best = -1
     let bestD = 12 // só considera cliques a menos de 12% da largura de algum ponto
-    pairs.forEach((p, i) => {
+    viewPairs.forEach((p, i) => {
       const d = Math.hypot(p[side].x - at.x, p[side].y - at.y)
       if (d < bestD) {
         bestD = d
@@ -315,10 +335,17 @@ export default function SuggestDialog({ imageA, imageB, cropA, cropB, minutiae, 
                 </p>
               )}
 
-              {pairs.length > 0 && (
+              {pairs.length > 0 && !views && (
+                <div className="flex items-center justify-center gap-2 py-16 text-sm text-gray-600 dark:text-gray-300">
+                  <Loader2 size={18} className="animate-spin" />
+                  Preparando o recorte das imagens…
+                </div>
+              )}
+
+              {pairs.length > 0 && views && (
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_17rem]">
                   <div className="grid gap-3 md:grid-cols-2">
-                    {([['Imagem Questionada (A)', imageA, 'a'], ['Imagem Padrão (B)', imageB, 'b']] as const).map(
+                    {([['Imagem Questionada (A)', views.a.src, 'a'], ['Imagem Padrão (B)', views.b.src, 'b']] as const).map(
                       ([title, src, side]) => (
                         <div key={side} className="rounded-lg bg-gray-50 p-2 ring-1 ring-gray-200 dark:bg-gray-900/40 dark:ring-gray-700">
                           <p className="mb-1 text-xs font-medium text-gray-600 dark:text-gray-300">{title}</p>
@@ -328,7 +355,7 @@ export default function SuggestDialog({ imageA, imageB, cropA, cropB, minutiae, 
                             zoomCursor={lensMode}
                             onBackgroundClick={(at) => clickImage(side, at)}
                           >
-                            {pairs.map((p, i) => (
+                            {viewPairs.map((p, i) => (
                               <Marker
                                 key={i}
                                 coord={p[side]}
@@ -452,19 +479,24 @@ export default function SuggestDialog({ imageA, imageB, cropA, cropB, minutiae, 
           </div>
         </div>
 
-        {lensIndex !== null && pairs[lensIndex] && result && (
+        {lensIndex !== null && pairs[lensIndex] && result && views && (
           <PairLens
-            pairs={pairs}
-            original={original}
+            pairs={viewPairs}
+            original={viewOriginal}
             index={lensIndex}
-            srcA={imageA}
-            srcB={imageB}
-            periodPct={result.periodPct}
+            srcA={views.a.src}
+            srcB={views.b.src}
+            // Espaçamento das cristas vem em % da largura da imagem original; na área recortada,
+            // a mesma distância é uma fração maior da largura.
+            periodPct={{
+              a: result.periodPct.a === null ? null : (result.periodPct.a * 100) / views.a.box.width,
+              b: result.periodPct.b === null ? null : (result.periodPct.b * 100) / views.b.box.width,
+            }}
             selected={selected.has(lensIndex)}
             selectedSet={selected}
             onToggle={() => toggle(lensIndex)}
             onIndex={setLensIndex}
-            onMovePoint={movePoint}
+            onMovePoint={(i, side, coord) => movePoint(i, side, toOriginal(coord, views[side].box))}
             onRestore={restorePoint}
             onClose={() => setLensIndex(null)}
           />
