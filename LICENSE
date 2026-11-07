@@ -1,0 +1,39 @@
+MINUTIA - Sistema de Processamento de Pontos Característicos
+Copyright (c) 2026 Victor Hugo Lopes Candido. Todos os direitos reservados.
+
+Este software, incluindo seu código-fonte, código compilado, interface, textos, manual,
+logotipos e demais materiais que o acompanham (o "Software"), é de propriedade exclusiva do
+autor e está protegido pela Lei nº 9.609/1998 (Lei do Software), pela Lei nº 9.610/1998
+(Lei de Direitos Autorais) e pelos tratados internacionais aplicáveis.
+
+1. NENHUMA LICENÇA É CONCEDIDA
+   O fato de o código-fonte estar visível publicamente não concede a ninguém qualquer direito
+   sobre ele. Sem autorização prévia, expressa e por escrito do autor, é proibido:
+   a) copiar, reproduzir ou armazenar o Software, no todo ou em parte;
+   b) modificar, adaptar, traduzir ou criar obras derivadas;
+   c) distribuir, publicar, vender, alugar, sublicenciar ou disponibilizar o Software a
+      terceiros, por qualquer meio;
+   d) hospedar ou executar o Software em servidores ou ambientes próprios ou de terceiros;
+   e) remover ou alterar avisos de autoria, de direitos autorais ou de marca.
+
+2. AUTORIZAÇÕES
+   Qualquer uso não previsto acima depende de autorização por escrito do autor, que definirá
+   o alcance, o prazo e as condições de cada caso. Autorizações concedidas a uma pessoa ou
+   instituição não se estendem a terceiros e não transferem a propriedade do Software.
+
+3. COMPONENTES DE TERCEIROS
+   O Software utiliza componentes de terceiros, que continuam regidos por suas próprias
+   licenças e não são abrangidos por este aviso, entre eles:
+   - React e React DOM (MIT)
+   - pdf.js / pdfjs-dist (Apache License 2.0)
+   - html2canvas-pro (MIT)
+   - lucide-react (ISC)
+   - Fonte Cinzel, via @fontsource/cinzel (SIL Open Font License 1.1)
+   - MINDTCT, do NIST Biometric Image Software - NBIS (domínio público; ver public/nbis/NOTICE.txt)
+
+4. AUSÊNCIA DE GARANTIAS
+   O Software é fornecido "no estado em que se encontra", sem garantias de qualquer tipo. Os
+   resultados gerados, inclusive as sugestões automáticas de pontos (BETA), são apenas apoio
+   ao trabalho do perito, que permanece responsável pela análise e pela conclusão.
+
+Contato para autorizações: https://github.com/InVictorLopes

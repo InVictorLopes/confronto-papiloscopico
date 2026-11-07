@@ -4,6 +4,7 @@ import {
   Crop,
   Download,
   Expand,
+  FlipHorizontal2,
   Hand,
   Loader2,
   Maximize,
@@ -66,6 +67,20 @@ function canvasToDataUrl(c: HTMLCanvasElement, src: string) {
   return mime === 'image/png' ? c.toDataURL(mime) : c.toDataURL(mime, 0.95)
 }
 
+// Ângulo sempre entre -180° e 180°, com uma casa decimal.
+function normAngle(a: number) {
+  const n = ((((a + 180) % 360) + 360) % 360) - 180
+  return Math.round(n * 10) / 10
+}
+
+// Caixa que contém a imagem girada (é nela que a seleção é feita). Os cantos dessa caixa que
+// ficam fora da imagem saem brancos no arquivo final.
+function rotatedBox(w: number, h: number, deg: number) {
+  const r = (deg * Math.PI) / 180
+  const c = Math.abs(Math.cos(r)), s = Math.abs(Math.sin(r))
+  return { w: w * c + h * s, h: w * s + h * c }
+}
+
 // Retângulo entre um ponto fixo (âncora) e o ponto atual, dentro da imagem. No modo quadrado,
 // o lado é o maior dos dois deslocamentos, limitado ao espaço disponível naquela direção.
 function rectFromAnchor(ax: number, ay: number, px: number, py: number, W: number, H: number, shape: Shape): Rect {
@@ -81,8 +96,16 @@ function rectFromAnchor(ax: number, ay: number, px: number, py: number, W: numbe
 }
 
 export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClose }: EasyCropProps) {
-  const [src, setSrc] = useState(image)
-  const [nat, setNat] = useState<{ w: number; h: number } | null>(null)
+  const src = image
+  // Tamanho da imagem original.
+  const [orig, setOrig] = useState<{ w: number; h: number } | null>(null)
+  // Giro (graus, livre) e espelhamento horizontal: aparecem ao vivo na tela e só são aplicados
+  // de verdade uma vez, ao gerar o arquivo (sem perder qualidade com giros repetidos).
+  const [angle, setAngle] = useState(0)
+  const [flip, setFlip] = useState(false)
+  // Área de trabalho: a caixa da imagem já girada (sem giro, é a própria imagem). A seleção e
+  // o resto da ferramenta trabalham em px dessa caixa.
+  const nat = orig ? rotatedBox(orig.w, orig.h, angle) : null
   const [view, setView] = useState({ w: 0, h: 0 })
   const [zoom, setZoom] = useState(1)
   // Posição do canto superior esquerdo da imagem dentro da área de visualização (px da tela).
@@ -93,7 +116,6 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
   const [shape, setShape] = useState<Shape>('free')
   const [panTool, setPanTool] = useState(false)
   const [spaceDown, setSpaceDown] = useState(false)
-  const [rotated, setRotated] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
 
   const viewportRef = useRef<HTMLDivElement>(null)
@@ -109,7 +131,7 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
 
   useEffect(() => {
     let alive = true
-    loadImage(src).then((img) => alive && setNat({ w: img.naturalWidth, h: img.naturalHeight }))
+    loadImage(src).then((img) => alive && setOrig({ w: img.naturalWidth, h: img.naturalHeight }))
     return () => {
       alive = false
     }
@@ -125,7 +147,10 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
     return () => ro.disconnect()
   }, [])
 
-  const fit = nat && view.w ? Math.min(view.w / nat.w, view.h / nat.h) * 0.94 : 0
+  // O "caber na tela" usa o giro arredondado para 90°: assim o ajuste fino do ângulo não fica
+  // mudando o tamanho da imagem na tela a cada passo.
+  const fitBox = orig ? rotatedBox(orig.w, orig.h, Math.round(angle / 90) * 90) : null
+  const fit = fitBox && view.w ? Math.min(view.w / fitBox.w, view.h / fitBox.h) * 0.94 : 0
   const scale = fit * zoom
   const stageW = nat ? nat.w * scale : 0
   const stageH = nat ? nat.h * scale : 0
@@ -144,13 +169,40 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
     if (!nat || !fit) return
     setZoom(1)
     setPan({ x: (view.w - nat.w * fit) / 2, y: (view.h - nat.h * fit) / 2 })
-  }, [nat, fit, view.w, view.h])
+  }, [nat?.w, nat?.h, fit, view.w, view.h])
 
-  // Centraliza ao abrir e depois de girar (quando a imagem muda de tamanho).
+  // Centraliza ao abrir.
   useLayoutEffect(() => {
     resetView()
-    // Só quando a imagem ou a área ficam conhecidas pela primeira vez — não a cada zoom.
-  }, [nat, view.w > 0])
+    // Só quando a imagem ou a área ficam conhecidas pela primeira vez — não a cada zoom ou giro.
+  }, [orig, view.w > 0])
+
+  // Gira mantendo o centro da imagem no mesmo lugar da tela, e a seleção no mesmo lugar em
+  // relação à imagem (a caixa da imagem girada muda de tamanho com o ângulo).
+  function changeAngle(next: number) {
+    if (!orig || !nat || !pan) {
+      setAngle(normAngle(next))
+      return
+    }
+    const a = normAngle(next)
+    const box = rotatedBox(orig.w, orig.h, a)
+    const fb = rotatedBox(orig.w, orig.h, Math.round(a / 90) * 90)
+    const nfit = view.w ? Math.min(view.w / fb.w, view.h / fb.h) * 0.94 : fit
+    const ns = nfit * zoom
+    const cx = pan.x + (nat.w * scale) / 2
+    const cy = pan.y + (nat.h * scale) / 2
+    setPan(clampPan({ x: cx - (box.w * ns) / 2, y: cy - (box.h * ns) / 2 }, box.w * ns, box.h * ns))
+    if (sel) {
+      const w = Math.min(sel.w, box.w), h = Math.min(sel.h, box.h)
+      setSel({
+        x: clamp(sel.x + (box.w - nat.w) / 2, 0, box.w - w),
+        y: clamp(sel.y + (box.h - nat.h) / 2, 0, box.h - h),
+        w,
+        h,
+      })
+    }
+    setAngle(a)
+  }
 
   // Zoom mantendo embaixo do ponto (vx, vy) da área o mesmo ponto da imagem.
   const zoomAt = useCallback(
@@ -286,48 +338,34 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
     } else setSel({ x: 0, y: 0, w: nat.w, h: nat.h })
   }
 
-  async function rotate(dir: 1 | -1) {
-    if (!nat || busy) return
-    setBusy('Girando a imagem…')
-    try {
-      const img = await loadImage(src)
-      const c = document.createElement('canvas')
-      c.width = img.naturalHeight
-      c.height = img.naturalWidth
-      const ctx = c.getContext('2d')!
-      ctx.translate(c.width / 2, c.height / 2)
-      ctx.rotate((dir * Math.PI) / 2)
-      ctx.drawImage(img, -img.naturalWidth / 2, -img.naturalHeight / 2)
-      const next = canvasToDataUrl(c, src)
-      c.width = c.height = 0
-      setSel(null)
-      setZoom(1)
-      setRotated(true)
-      setSrc(next)
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  // Gera o arquivo recortado (resolução cheia). Sem seleção, usa a imagem inteira (ex: só girou).
+  // Gera o arquivo final em resolução cheia, aplicando giro, espelho e recorte de uma vez só.
+  // Sem seleção, sai a imagem inteira (ex: só girou ou espelhou); o que fica fora da imagem
+  // girada (cantos da caixa) sai branco.
   async function buildResult(): Promise<string> {
     const img = await loadImage(src)
+    const W = img.naturalWidth, H = img.naturalHeight
+    const box = rotatedBox(W, H, angle)
     const r = sel
       ? { x: Math.round(sel.x), y: Math.round(sel.y), w: Math.round(sel.w), h: Math.round(sel.h) }
-      : { x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight }
+      : { x: 0, y: 0, w: Math.round(box.w), h: Math.round(box.h) }
     const c = document.createElement('canvas')
     c.width = Math.max(1, r.w)
     c.height = Math.max(1, r.h)
     const ctx = c.getContext('2d')!
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, c.width, c.height)
-    ctx.drawImage(img, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h)
+    ctx.imageSmoothingQuality = 'high'
+    // Mesma ordem da tela (rotate(...) scaleX(...)): espelha, depois gira, em torno do centro.
+    ctx.translate(box.w / 2 - r.x, box.h / 2 - r.y)
+    ctx.rotate((angle * Math.PI) / 180)
+    if (flip) ctx.scale(-1, 1)
+    ctx.drawImage(img, -W / 2, -H / 2)
     const url = canvasToDataUrl(c, src)
     c.width = c.height = 0
     return url
   }
 
-  const canUse = !!sel || rotated
+  const canUse = !!sel || angle !== 0 || flip
 
   async function apply() {
     if (!canUse || busy) return
@@ -367,6 +405,8 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
         onClose()
         return
       }
+      // Digitando no campo do ângulo (ou no controle deslizante): as teclas são do campo.
+      if (e.target instanceof HTMLInputElement) return
       if (e.key === ' ') {
         e.preventDefault()
         setSpaceDown(true)
@@ -441,11 +481,54 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
           </div>
           <span className="hidden h-5 w-px bg-gray-200 sm:block dark:bg-gray-600" />
           <div className="flex items-center gap-1">
-            <button onClick={() => rotate(-1)} disabled={!!busy} className={btn} title="Girar 90° para a esquerda">
+            <button onClick={() => changeAngle(angle - 90)} disabled={!orig} className={btn} title="Girar 90° para a esquerda">
               <RotateCcw size={14} />
             </button>
-            <button onClick={() => rotate(1)} disabled={!!busy} className={btn} title="Girar 90° para a direita">
+            <input
+              type="range"
+              min={-180}
+              max={180}
+              step={0.1}
+              value={angle}
+              onChange={(e) => changeAngle(Number(e.target.value))}
+              disabled={!orig}
+              className="w-28 sm:w-36"
+              aria-label="Ângulo de giro"
+              title="Giro livre — arraste para endireitar a imagem"
+            />
+            <div className="flex items-center gap-0.5">
+              <input
+                type="number"
+                min={-180}
+                max={180}
+                step={0.1}
+                value={angle}
+                onChange={(e) => {
+                  if (e.target.value === '' || Number.isNaN(Number(e.target.value))) return
+                  changeAngle(Number(e.target.value))
+                }}
+                disabled={!orig}
+                className="w-16 rounded border border-gray-300 bg-white px-1 py-1 text-center text-xs text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200"
+                aria-label="Ângulo de giro em graus"
+                title="Ângulo exato, em graus (aceita decimais)"
+              />
+              <span className="text-xs text-gray-500 dark:text-gray-400">°</span>
+            </div>
+            <button onClick={() => changeAngle(angle + 90)} disabled={!orig} className={btn} title="Girar 90° para a direita">
               <RotateCw size={14} />
+            </button>
+            <button onClick={() => changeAngle(0)} disabled={!orig || angle === 0} className={btn} title="Voltar o giro para 0°">
+              0°
+            </button>
+            <button
+              onClick={() => setFlip((v) => !v)}
+              disabled={!orig}
+              className={flip ? btnOn : btn}
+              title="Espelhar horizontalmente (frontal/traseira)"
+              aria-pressed={flip}
+            >
+              <FlipHorizontal2 size={14} />
+              Espelhar
             </button>
           </div>
           <span className="hidden h-5 w-px bg-gray-200 sm:block dark:bg-gray-600" />
@@ -502,9 +585,26 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
                   height: stageH,
                   cursor: panning ? (dragRef.current?.mode === 'pan' ? 'grabbing' : 'grab') : 'crosshair',
                   touchAction: 'none',
+                  // Cantos da caixa fora da imagem girada: brancos, como saem no arquivo.
+                  backgroundColor: '#ffffff',
                 }}
               >
-                <img src={src} alt={title} draggable={false} className="pointer-events-none block h-full w-full" />
+                {orig && (
+                  <img
+                    src={src}
+                    alt={title}
+                    draggable={false}
+                    className="pointer-events-none absolute block max-w-none"
+                    style={{
+                      width: orig.w * scale,
+                      height: orig.h * scale,
+                      left: (stageW - orig.w * scale) / 2,
+                      top: (stageH - orig.h * scale) / 2,
+                      transformOrigin: 'center center',
+                      transform: `rotate(${angle}deg) scaleX(${flip ? -1 : 1})`,
+                    }}
+                  />
+                )}
                 {sel && (
                   <div
                     className="absolute"
@@ -564,7 +664,11 @@ export default function EasyCrop({ image, title, slot, hasPoints, onApply, onClo
                 <em>Mover imagem</em>: arrastar a imagem
               </>
             )}
-            {nat && <span className="ml-2 tabular-nums text-gray-400">(imagem: {nat.w} × {nat.h} px)</span>}
+            {orig && (
+              <span className="ml-2 tabular-nums text-gray-400">
+                (imagem: {orig.w} × {orig.h} px{angle !== 0 ? ` · giro ${angle}°` : ''}{flip ? ' · espelhada' : ''})
+              </span>
+            )}
           </p>
           <div className="flex items-center gap-2">
             <button
